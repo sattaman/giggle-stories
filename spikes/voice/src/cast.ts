@@ -1,6 +1,11 @@
 // Who is in the scene and what they sound like.
-// Voice Design guidance: put *durable* traits (age, timbre, accent, energy) in the
+// Voice Design guidance: put *durable* traits (timbre, pitch, accent, energy) in the
 // description, keep it to 1–2 sentences, and leave per-line delivery to `style`.
+//
+// Child voices: Voice Design rejects descriptions with age/child cues ("girl of about
+// eleven", "youthful", "kid" → "blocked by safety policies"), and the 2,089-voice
+// catalogue has no persona under 20. Describe how the voice *sounds* or frame it as a
+// cartoon character instead (see docs/research/gemini-tts.md, 2026-09-24 probe).
 
 export interface CastMember {
   readonly key: string;
@@ -22,7 +27,7 @@ export const cast = [
     displayName: "storytime-spike-pip",
     gender: "female",
     description:
-      "A bright, young-sounding British girl of about eleven, quick-talking and endlessly confident, with a cheeky, playful energy and a laugh always close to the surface.",
+      "A cartoon heroine's voice for an animated adventure: bright, bouncy, cheeky and fearless, with a British accent.",
   },
   {
     key: "reginald",

@@ -7,3 +7,12 @@
 - Price: Flash TTS $0.50 in / $9 out per 1M tok ≈ $0.0135/min; Lite ≈ $0.009/min; doubles 2027-01-01. Free tier lists Flash TTS.
 - Transcribe: gemini-3.5-transcribe, generation_config.transcription_config {mode:"smart", language_codes:["en-GB"]}; webm/opus ok; inline data unverified (fallback ai.files.upload).
 - UK: voice replication NOT available; voice design presumably OK (unverified). SynthID watermark. Vertex TTS "coming soon" -> use Developer API.
+
+## Findings from live runs, 2026-09-24 (UK, AI Studio key)
+- **Prebuilt voice TTS works.** Latency ≈ real time (6.9s of audio took 6.8s). Voice Design works from the UK and takes 13–33s per voice.
+- **No child voices.** Voice Design rejects descriptions with age or child cues ("girl of about eleven", "youthful", "cheeky British kid") with *"Voice prompt was blocked by safety policies."* This isn't documented anywhere we could find.
+  - Passed: descriptions of the sound ("light, bright, high-pitched British female voice…"), cartoon framing ("A cartoon heroine's voice for an animated adventure…"), and non-human characters (a pompous guinea pig).
+  - The catalogue has 2,089 prebuilt voices, and **the youngest stated persona is 20**.
+  - A `style` with a child cue ("like an excited eleven-year-old girl") was **not** blocked on a prebuilt voice. Don't depend on that; the policy could tighten.
+- **Free tier: 3 requests per minute for gemini-3.8-flash-tts.** That makes a 20-line page unusable (about 7 minutes). Tier 1 (billing linked) is needed.
+- **Prebuilt persona groups** include "Storyteller & Narrator" (205, with 13 en-GB) and "Character & Theatrical" (22, all adult). Candidates for narrator fallbacks: en-gb-storyteller-*.
