@@ -71,3 +71,12 @@ describe("scriptProblems", () => {
     );
   });
 });
+
+describe("ReplyBody", () => {
+  it("accepts answers, approvals and change requests", async () => {
+    const { ReplyBody } = await import("../src/api.ts");
+    expect(ReplyBody.parse({ kind: "answer", text: "grumpy" })).toEqual({ kind: "answer", text: "grumpy" });
+    expect(ReplyBody.parse({ kind: "outline", approved: true })).toEqual({ kind: "outline", approved: true });
+    expect(ReplyBody.safeParse({ kind: "outline", approved: false }).success).toBe(false);
+  });
+});

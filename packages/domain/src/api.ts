@@ -63,11 +63,12 @@ export type StoryView = z.infer<typeof StoryView>;
 export const StartStoryBody = z.object({ idea: z.string().min(1).max(2000) });
 export type StartStoryBody = z.infer<typeof StartStoryBody>;
 
-export const ReplyBody = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("answer"), text: z.string().min(1).max(1000) }),
+const AnswerReply = z.object({ kind: z.literal("answer"), text: z.string().min(1).max(1000) });
+const OutlineReply = z.discriminatedUnion("approved", [
   z.object({ kind: z.literal("outline"), approved: z.literal(true) }),
   z.object({ kind: z.literal("outline"), approved: z.literal(false), feedback: z.string().min(1).max(1000) }),
 ]);
+export const ReplyBody = z.union([AnswerReply, OutlineReply]);
 export type ReplyBody = z.infer<typeof ReplyBody>;
 
 export const TranscriptionResult = z.object({ text: z.string() });
