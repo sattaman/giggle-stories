@@ -3,6 +3,7 @@
 //
 //   pnpm spike:check
 
+import "./env.js";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { getCurrentRunTree } from "langsmith/traceable";

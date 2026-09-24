@@ -5,6 +5,7 @@
 //   pnpm spike:voice --variant styled --play
 //   pnpm spike:voice --concurrency 8
 
+import "./env.js";
 import { spawn } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";

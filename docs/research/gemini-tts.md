@@ -16,3 +16,7 @@
   - A `style` with a child cue ("like an excited eleven-year-old girl") was **not** blocked on a prebuilt voice. Don't depend on that; the policy could tighten.
 - **Free tier: 3 requests per minute for gemini-3.8-flash-tts.** That makes a 20-line page unusable (about 7 minutes). Tier 1 (billing linked) is needed.
 - **Prebuilt persona groups** include "Storyteller & Narrator" (205, with 13 en-GB) and "Character & Theatrical" (22, all adult). Candidates for narrator fallbacks: en-gb-storyteller-*.
+- **Tier 1 run (2026-09-24, concurrency 4):** styled page: 112s of audio in 70s wall, median line 4.9s, ~$0.031. Plain page: 104s of audio in 116s wall, ~$0.029.
+  - 429s still happen at concurrency 4 on Tier 1, so the TTS RPM limit is tight and needs checking at ai.dev/rate-limit.
+  - Design implication: **start playback after line 1** and keep synthesis ahead of the listener, rather than waiting for the whole page.
+- **Voice IDs belong to a single project.** After switching keys to another project, the cached voices had to be designed again.
