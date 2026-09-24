@@ -31,7 +31,7 @@ Things to watch in play sessions (write them down; they matter more than any met
 | Observability | LangSmith (EU endpoint) + pino structured logs + a folder of files per run |
 | Evals | langsmith/vitest + openevals |
 | HTTP | Fastify 5 (pino built in) with SSE for progress |
-| Web | Vite 8 + React 19 |
+| Client | **Expo 57 (React Native + web) from day one**: runs in the browser now, and the same codebase becomes the iOS/Android app (see §8a). Fallback: Vite 8 + React 19 |
 | Tests | vitest 5 |
 | Persistence | MemorySaver (tests) → SqliteSaver (local) → PostgresSaver (Cloud Run, later) |
 
@@ -70,7 +70,7 @@ storytime/
 │   ├── app/        # ports.ts, graph/ (state, nodes, edges), prompts/*.md, use-cases
 │   ├── adapters/   # openrouter/, gemini-tts/, gemini-voices/, gemini-stt/, fs-audio/, sqlite/, fakes/
 │   ├── server/     # Fastify routes, SSE, wiring.ts, debug routes
-│   ├── web/        # Vite + React child UI + /debug viewer
+│   ├── client/     # Expo (web now, iOS/Android later): child UI + /debug viewer
 │   └── evals/      # *.eval.ts, datasets/, judges/
 ├── spikes/voice/   # Phase 0 throwaway script
 ├── docs/           # this plan, research notes, ADRs
@@ -169,7 +169,26 @@ This is where most of the iteration goes.
 - **Outline:** 6 simple beat cards, with "Yes!" and "Change something" (by voice).
 - **Performance view:** the speaking character's card bounces, their line appears in a speech bubble, and narration is highlighted. Timing comes from per-segment audio durations.
 - **😂 / 👍 buttons** send LangSmith feedback via a presigned token (no API key in the browser).
-- **Mobile later:** the server does all the work behind a versioned JSON API; audio is served by URL. The client is thin, shares the zod types, and Expo can reuse all of it.
+- **Mobile:** see §8a. The same Expo codebase becomes the app.
+
+## 8a. Mobile-readiness rules (apply from the start)
+
+The POC is web-first, but nothing we build should need rewriting for the app.
+
+1. **One client codebase.** Build the child UI with Expo (Expo Router + react-native-web) and run it in the browser for the POC.
+   If the POC works, `expo run:ios` / EAS Build gives us the app. The Vite fallback would mean rewriting the UI later.
+2. **`packages/domain` is platform-neutral.** zod and pure TS only: no Node or DOM APIs (`types: []` in its tsconfig), so it runs on Hermes.
+   Client and server import the same schemas; API responses are validated with them on the client too.
+3. **The server does all the work.** LangGraph, prompts, API keys and TTS all stay server-side. Clients render state and play audio.
+   Nothing secret or provider-specific ships in an app binary.
+4. **Versioned, resource-style HTTP API** (`/v1/stories/:id`, `/v1/stories/:id/replies`, …), with an OpenAPI spec generated from the zod schemas.
+   Progress events use SSE with a polling fallback (`GET /v1/stories/:id` returns the whole state). Streaming on React Native uses `expo/fetch`.
+5. **Auth-ready.** No cookie-only sessions. Use a bearer token per device/family (a static dev token in the POC), so mobile works without changes.
+6. **Audio as URLs plus a timeline.** Each performed page is `{ audioUrl, segments: [{ speaker, text, startMs, endMs }] }`, so web and native animate identically from the same data.
+   WAV for the POC. Later, encode AAC/Opus for mobile data use (Gemini also offers mp3 and ogg_opus output).
+7. **Recording formats differ by platform.** Web records `audio/webm;codecs=opus`, iOS records `audio/mp4` (AAC). The `Transcriber` port accepts a mime type, and the adapter handles both.
+8. **Interruptible and resumable.** Mobile apps get backgrounded. The LangGraph checkpointer means a story can be resumed from any device via `GET /v1/stories/:id` (state plus any pending interrupt).
+9. **Big touch targets and no hover-only UI.** Design for a phone held by an 8–12-year-old from day one.
 
 ## 9. Phases
 
@@ -180,7 +199,7 @@ This is where most of the iteration goes.
 | 2 | Graph on fakes | the full graph with fake ports + MemorySaver; vitest routing/interrupt tests; open it in **Studio** | StateSchema, interrupt/Command, context DI, Studio | — |
 | 3 | Real adapters | OpenRouter StoryWriter (withStructuredOutput), Gemini TTS/Voices/Transcribe adapters, SqliteSaver, LangSmith tracing + threads; the CLI plays a full story | structured output, traceable, threads | ✅ via CLI |
 | 4 | Make it funny | iterate on writer prompts; 15–25 idea dataset; deterministic evaluators + LLM judges (humour, idea preservation, age fit); pairwise model comparison | datasets, `evaluate`, openevals, Playground | ✅ rate 3 variants |
-| 5 | Web UI | Fastify API + SSE, React child UI, mic → transcribe, voice auditions, performance view, 😂 feedback, debug page | streaming, presigned feedback | ✅ **real session** |
+| 5 | Client UI (Expo, run on web) | Fastify `/v1` API + SSE, Expo child UI, mic → transcribe, voice auditions, performance view, 😂 feedback, debug page | streaming, presigned feedback | ✅ **real session** |
 | 6 | Play and iterate | play sessions + notes; rate stories in an annotation queue; tune | annotation queues, regression evals | ✅ |
 | later | Grow | pages 2–6, streaming audio, audio-director node, images, Cloud Run + Postgres + Secret Manager, Model Armor, Expo app | | |
 
