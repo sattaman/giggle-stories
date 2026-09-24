@@ -1,0 +1,10 @@
+packages:
+  - "packages/*"
+  - "spikes/*"
+
+# Build-script approvals (pnpm 11 blocks them by default).
+# @google/genai: no-op preinstall + repo-only prepare. protobufjs: optional postinstall.
+allowBuilds:
+  "@google/genai": false
+  protobufjs: false
+  esbuild: true

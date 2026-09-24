@@ -1,0 +1,10 @@
+# LangSmith JS (langsmith 0.10.5, openevals 0.2.2) — verified 2026-09-24
+- Env: LANGSMITH_TRACING, LANGSMITH_API_KEY, LANGSMITH_PROJECT, LANGSMITH_ENDPOINT=https://eu.api.smith.langchain.com (EU; region fixed at signup). Free: 1 seat, 5k traces/mo, 14d retention.
+- traceable from "langsmith/traceable" {name, run_type:"llm"|"chain"|"tool"..., tags, metadata, processInputs/processOutputs, extractAttachments}. Threads: metadata thread_id|session_id (uuid7). LangGraph configurable.thread_id auto-propagates. awaitPendingTraceBatches() in scripts.
+- wrapGemini only traces generateContent — wrap TTS port ourselves; strip audio bytes via processOutputs.
+- Attachments: {name:["audio/wav", Uint8Array]} on traces/examples; evaluate({includeAttachments:true}).
+- evaluate(target,{data, evaluators:[({inputs,outputs,referenceOutputs})=>({key,score})], experimentPrefix, maxConcurrency}); pairwise evaluate([expA,expB],{evaluators, randomizeOrder}).
+- openevals: createLLMAsJudge({prompt, feedbackKey, judge|model, continuous, useReasoning, choices, fewShotExamples}); runMultiturnSimulation({app({inputs,threadId}), user:createLLMSimulatedUser({system, model, fixedResponses}), trajectoryEvaluators, maxTurns}) — resume interrupts via Command in app adapter.
+- Vitest: import * as ls from "langsmith/vitest"; ls.describe/ls.test(name,{inputs,referenceOutputs},fn); ls.logOutputs, ls.logFeedback; reporter "langsmith/vitest/reporter"; *.eval.ts; LANGSMITH_TEST_TRACKING=false dry-run.
+- Feedback: client.createFeedback({runId, sessionId, key, score, value}); createPresignedFeedbackToken(runId,key,{expiration}) -> browser POSTs tok.url (kid 😂 button). Annotation queues for parent ratings.
+- Prompts: hub.pull from "langchain/hub/node"; recommendation: repo prompts as source of truth behind PromptPort, Playground for experiments.

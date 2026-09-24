@@ -1,0 +1,81 @@
+{
+  // TypeScript strict+ base configuration.
+  // Extend from project-specific overlays — do not use this file as the root tsconfig.
+  // See overlay-examples.md for Node ESM, bundler, and library configurations.
+
+  "compilerOptions": {
+    // ──────────────────────────────────────────────────────────────────────
+    // Core soundness — everything in "strict" plus additional narrowing
+    // ──────────────────────────────────────────────────────────────────────
+    "strict": true,
+
+    // Distinguishes { key?: string } from { key: string | undefined }.
+    // Prevents accidentally passing undefined where a property should be absent.
+    "exactOptionalPropertyTypes": true,
+
+    // obj[key] returns T | undefined instead of T.
+    // Forces handling the case where indexed access might miss.
+    "noUncheckedIndexedAccess": true,
+
+    // obj["key"] required for index-signature access, obj.key only for known properties.
+    // Makes uncertain access visible in the syntax.
+    "noPropertyAccessFromIndexSignature": true,
+
+    // catch (e) gives unknown instead of any.
+    // Already part of strict in TS 5+, included for clarity.
+    "useUnknownInCatchVariables": true,
+
+    // ──────────────────────────────────────────────────────────────────────
+    // Control-flow correctness
+    // ──────────────────────────────────────────────────────────────────────
+
+    // Require `override` keyword when overriding base class methods.
+    "noImplicitOverride": true,
+
+    // Error on functions with code paths that don't explicitly return.
+    "noImplicitReturns": true,
+
+    // Error on switch case fall-through without explicit break/return.
+    "noFallthroughCasesInSwitch": true,
+
+    // Unreachable code and unused labels are errors, not silent dead weight.
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false,
+
+    // ──────────────────────────────────────────────────────────────────────
+    // Module correctness
+    // ──────────────────────────────────────────────────────────────────────
+
+    // Enforces that import/export syntax matches the module system.
+    // Replaces the old esModuleInterop/allowSyntheticDefaultImports dance.
+    "verbatimModuleSyntax": true,
+
+    // Required for single-file transpilers (esbuild, swc, Babel).
+    // Prevents features that require cross-file type information to emit.
+    "isolatedModules": true,
+
+    // Treats every file as a module regardless of import/export presence.
+    "moduleDetection": "force",
+
+    // Ensures side-effect-only imports resolve to real files.
+    "noUncheckedSideEffectImports": true,
+
+    // ──────────────────────────────────────────────────────────────────────
+    // Repository consistency
+    // ──────────────────────────────────────────────────────────────────────
+
+    // Prevents bugs on case-insensitive file systems.
+    "forceConsistentCasingInFileNames": true,
+
+    // Type packages (@types/*) must be explicitly selected in each overlay.
+    // Prevents ambient type pollution across unrelated parts of a monorepo.
+    "types": [],
+
+    // Type declaration errors are real errors.
+    // skipLibCheck trades accuracy for speed — not an acceptable default.
+    "skipLibCheck": false,
+
+    "target": "ES2023",
+    "lib": ["ES2023"]
+  }
+}
