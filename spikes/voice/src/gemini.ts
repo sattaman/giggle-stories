@@ -49,6 +49,36 @@ async function readCache(path: string): Promise<VoiceCache> {
   }
 }
 
+export interface DesignedVoice {
+  readonly id: string;
+  readonly preview: Buffer | undefined;
+  readonly latencyMs: number;
+}
+
+export type DesignVoice = (ai: GoogleGenAI, member: CastMember) => Promise<DesignedVoice>;
+
+export async function designVoice(ai: GoogleGenAI, member: CastMember): Promise<DesignedVoice> {
+  const started = performance.now();
+  const created = CreatedVoice.parse(
+    await ai.voices.create({
+      store: true,
+      voice: {
+        type: "prompted",
+        model: TTS_MODEL,
+        display_name: member.displayName,
+        gender: member.gender,
+        language_code: "en-GB",
+        prompted: { input: member.description },
+      },
+    }),
+  );
+  return {
+    id: created.id,
+    preview: created.sample_audio === undefined ? undefined : Buffer.from(created.sample_audio.data, "base64"),
+    latencyMs: Math.round(performance.now() - started),
+  };
+}
+
 /**
  * Returns a designed `voice_...` id per cast member. Voices are cached by a hash of
  * their description, so editing a description in cast.ts designs a fresh voice
@@ -58,6 +88,7 @@ export async function ensureVoices(
   ai: GoogleGenAI,
   members: readonly CastMember[],
   outDir: string,
+  design: DesignVoice = designVoice,
 ): Promise<Map<string, string>> {
   const cachePath = join(outDir, "voices.json");
   const previewDir = join(outDir, "voice-previews");
@@ -79,25 +110,11 @@ export async function ensureVoices(
       });
     }
 
-    const started = performance.now();
-    const created = CreatedVoice.parse(
-      await ai.voices.create({
-        store: true,
-        voice: {
-          type: "prompted",
-          model: TTS_MODEL,
-          display_name: member.displayName,
-          gender: member.gender,
-          language_code: "en-GB",
-          prompted: { input: member.description },
-        },
-      }),
-    );
-    const ms = Math.round(performance.now() - started);
-    console.log(`voice  ${member.key.padEnd(9)} designed ${created.id} in ${String(ms)}ms`);
+    const created = await design(ai, member);
+    console.log(`voice  ${member.key.padEnd(9)} designed ${created.id} in ${String(created.latencyMs)}ms`);
 
-    if (created.sample_audio !== undefined) {
-      await writeFile(join(previewDir, `${member.key}.wav`), Buffer.from(created.sample_audio.data, "base64"));
+    if (created.preview !== undefined) {
+      await writeFile(join(previewDir, `${member.key}.wav`), created.preview);
     }
     cache[member.key] = { id: created.id, descriptionHash };
     ids.set(member.key, created.id);
@@ -111,10 +128,15 @@ function isRetryable(error: unknown): boolean {
   return parsed.success && (parsed.data.status === 429 || parsed.data.status >= 500);
 }
 
-export async function synthesize(
-  ai: GoogleGenAI,
-  request: { readonly text: string; readonly voiceId: string; readonly style: string | undefined },
-): Promise<Synthesis> {
+export interface SynthesisRequest {
+  readonly text: string;
+  readonly voiceId: string;
+  readonly style: string | undefined;
+}
+
+export type Synthesize = (ai: GoogleGenAI, request: SynthesisRequest) => Promise<Synthesis>;
+
+export async function synthesize(ai: GoogleGenAI, request: SynthesisRequest): Promise<Synthesis> {
   const annotations =
     request.style === undefined ? [] : [{ type: "speech_metadata" as const, style: request.style }];
 

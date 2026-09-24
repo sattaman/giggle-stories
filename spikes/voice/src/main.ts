@@ -11,8 +11,10 @@ import { join } from "node:path";
 import { parseArgs } from "node:util";
 import { z } from "zod";
 import { cast } from "./cast.js";
-import { createClient, ensureVoices, synthesize, TTS_MODEL, type Synthesis } from "./gemini.js";
+import { uuid7 } from "langsmith";
+import { createClient, ensureVoices, TTS_MODEL, type Synthesis } from "./gemini.js";
 import { scene, type Segment } from "./scene.js";
+import { flushTraces, langsmith, publishPage, traceable, tracedDesignVoice, tracedSynthesize, tracingEnabled } from "./tracing.js";
 import { durationMs, silence, toWav } from "./wav.js";
 
 // Paid-tier prices per 1M tokens (checked 2026-09-24; they double on 2027-01-01).
@@ -52,20 +54,29 @@ async function mapWithConcurrency<T, R>(
   return results;
 }
 
-async function perform(
-  variant: Variant,
-  concurrency: number,
-  runDir: string,
-  voiceFor: (segment: Segment) => string,
-  ai: ReturnType<typeof createClient>,
-): Promise<string> {
+interface PerformRequest {
+  readonly variant: Variant;
+  readonly concurrency: number;
+  readonly runDir: string;
+  readonly voiceFor: (segment: Segment) => string;
+  readonly ai: ReturnType<typeof createClient>;
+}
+
+interface PerformResult {
+  readonly pagePath: string;
+  readonly audioMs: number;
+  readonly wallMs: number;
+  readonly estimatedCostUsd: number;
+}
+
+async function perform({ variant, concurrency, runDir, voiceFor, ai }: PerformRequest): Promise<PerformResult> {
   const dir = join(runDir, variant);
   await mkdir(join(dir, "segments"), { recursive: true });
   console.log(`\n▶ ${variant}: ${String(scene.length)} segments, concurrency ${String(concurrency)}`);
 
   const started = performance.now();
   const results = await mapWithConcurrency(scene, concurrency, async (segment, index): Promise<SegmentResult> => {
-    const synthesis = await synthesize(ai, {
+    const synthesis = await tracedSynthesize(ai, {
       text: segment.text,
       voiceId: voiceFor(segment),
       style: variant === "styled" ? segment.style : undefined,
@@ -82,7 +93,9 @@ async function perform(
   const gap = silence(GAP_MS);
   const page = Buffer.concat(results.flatMap((r) => [r.pcm, gap]));
   const pagePath = join(dir, "page.wav");
-  await writeFile(pagePath, toWav(page));
+  const pageWav = toWav(page);
+  await writeFile(pagePath, pageWav);
+  await publishPage({ variant, path: pagePath, wav: pageWav });
 
   const inputTokens = results.reduce((sum, r) => sum + (r.inputTokens ?? 0), 0);
   const outputTokens = results.reduce((sum, r) => sum + (r.outputTokens ?? 0), 0);
@@ -114,8 +127,16 @@ async function perform(
     `  ✔ ${(report.audioMs / 1000).toFixed(1)}s of audio in ${(wallMs / 1000).toFixed(1)}s wall · median line ${String(report.medianSegmentLatencyMs)}ms · ~$${report.estimatedCostUsd.toFixed(4)}`,
   );
   console.log(`  ${pagePath}`);
-  return pagePath;
+  return { pagePath, audioMs: report.audioMs, wallMs, estimatedCostUsd: report.estimatedCostUsd };
 }
+
+const tracedPerform = traceable(perform, {
+  name: "perform_page",
+  run_type: "chain",
+  client: langsmith,
+  tags: ["page"],
+  processInputs: ({ variant, concurrency }) => ({ variant, concurrency, segments: scene.length }),
+});
 
 function play(path: string): Promise<void> {
   return new Promise((resolve) => {
@@ -123,6 +144,35 @@ function play(path: string): Promise<void> {
       resolve();
     });
   });
+}
+
+interface SpikeRun {
+  readonly runId: string;
+  readonly apiKey: string;
+  readonly args: z.infer<typeof Args>;
+}
+
+async function spike({ runId, apiKey, args }: SpikeRun): Promise<readonly PerformResult[]> {
+    const outDir = join(import.meta.dirname, "..", "out");
+    const runDir = join(outDir, new Date().toISOString().replaceAll(":", "-").slice(0, 19));
+    await mkdir(runDir, { recursive: true });
+    console.log(`run ${runId}${tracingEnabled() ? " (tracing to LangSmith)" : ""}`);
+
+    const ai = createClient(apiKey);
+    const voices = await ensureVoices(ai, cast, outDir, tracedDesignVoice);
+    const voiceFor = (segment: Segment): string => {
+      const id = voices.get(segment.speaker);
+      if (id === undefined) throw new Error(`No voice for ${segment.speaker}`);
+      return id;
+    };
+
+    const variants: readonly Variant[] = args.variant === "both" ? ["styled", "plain"] : [args.variant];
+    const results: PerformResult[] = [];
+    for (const variant of variants) {
+      results.push(await tracedPerform({ variant, concurrency: args.concurrency, runDir, voiceFor, ai }));
+    }
+    console.log(`\nVoice previews: ${join(outDir, "voice-previews")}`);
+    return results;
 }
 
 async function main(): Promise<void> {
@@ -136,26 +186,24 @@ async function main(): Promise<void> {
   });
   const args = Args.parse(values);
 
-  const outDir = join(import.meta.dirname, "..", "out");
-  const runDir = join(outDir, new Date().toISOString().replaceAll(":", "-").slice(0, 19));
-  await mkdir(runDir, { recursive: true });
-
-  const ai = createClient(GEMINI_API_KEY);
-  const voices = await ensureVoices(ai, cast, outDir);
-  const voiceFor = (segment: Segment): string => {
-    const id = voices.get(segment.speaker);
-    if (id === undefined) throw new Error(`No voice for ${segment.speaker}`);
-    return id;
-  };
-
-  const variants: readonly Variant[] = args.variant === "both" ? ["styled", "plain"] : [args.variant];
-  const pages: string[] = [];
-  for (const variant of variants) {
-    pages.push(await perform(variant, args.concurrency, runDir, voiceFor, ai));
+  const runId = uuid7();
+  try {
+    const tracedSpike = traceable(spike, {
+      name: "voice_spike",
+      run_type: "chain",
+      client: langsmith,
+      tags: ["spike", "phase-0", `variant:${args.variant}`],
+      // thread_id groups this run's traces as one LangSmith thread; children inherit it.
+      metadata: { thread_id: runId },
+      // Never record the API key.
+      processInputs: ({ runId: id, args: options }) => ({ run_id: id, ...options }),
+      processOutputs: ({ outputs }) => ({ pages: outputs }),
+    });
+    const pages = await tracedSpike({ runId, apiKey: GEMINI_API_KEY, args });
+    if (args.play) for (const page of pages) await play(page.pagePath);
+  } finally {
+    await flushTraces();
   }
-
-  console.log(`\nVoice previews: ${join(outDir, "voice-previews")}`);
-  if (args.play) for (const page of pages) await play(page);
 }
 
 await main();

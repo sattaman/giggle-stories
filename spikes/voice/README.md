@@ -19,3 +19,19 @@ What to listen for (with her):
 - Does "styled" beat "plain"?
 - Are the jokes landing?
 - Is the narrator fun or annoying?
+
+## Tracing (LangSmith)
+
+Set these in `.env`: `LANGSMITH_TRACING=true`, `LANGSMITH_API_KEY`, `LANGSMITH_PROJECT`, and `LANGSMITH_ENDPOINT=https://eu.api.smith.langchain.com` if your account is in the EU region.
+
+Each run is one trace, and the whole run is grouped as one LangSmith thread via `thread_id`:
+
+```
+voice_spike (chain)                 run_id, variant, concurrency
+├── design_voice (tool) × n         only for voices not already cached
+└── perform_page (chain) × variant
+    ├── gemini_tts (llm) × 20       text, style, voice_id → audio_ms, latency_ms, usage_metadata
+    └── publish_page (tool)         page WAV attached (play it in the LangSmith UI)
+```
+
+Tracing lives in `src/tracing.ts` as wrappers around the Gemini functions. The API key and raw audio bytes are never recorded; only the finished page is uploaded, as an attachment. With `LANGSMITH_TRACING` unset, the wrappers do nothing.

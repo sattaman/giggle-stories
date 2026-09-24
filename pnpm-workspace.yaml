@@ -8,3 +8,6 @@ allowBuilds:
   "@google/genai": false
   protobufjs: false
   esbuild: true
+
+patchedDependencies:
+  langsmith@0.10.5: patches/langsmith@0.10.5.patch

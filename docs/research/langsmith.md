@@ -8,3 +8,8 @@
 - Vitest: import * as ls from "langsmith/vitest"; ls.describe/ls.test(name,{inputs,referenceOutputs},fn); ls.logOutputs, ls.logFeedback; reporter "langsmith/vitest/reporter"; *.eval.ts; LANGSMITH_TEST_TRACKING=false dry-run.
 - Feedback: client.createFeedback({runId, sessionId, key, score, value}); createPresignedFeedbackToken(runId,key,{expiration}) -> browser POSTs tok.url (kid 😂 button). Annotation queues for parent ratings.
 - Prompts: hub.pull from "langchain/hub/node"; recommendation: repo prompts as source of truth behind PromptPort, Playground for experiments.
+- Gotchas found in practice (2026-09-24):
+  - **Attachment names must not contain periods.** A name like `page.wav` is silently skipped with a console warning, so use `page_audio`.
+  - Pass the same `client` to every `traceable` so that `client.awaitPendingTraceBatches()` flushes all runs.
+  - Per-run metadata such as `thread_id` goes in the traceable **config**, not a call argument; build the wrapper per run.
+  - The d.ts needs a patch under `exactOptionalPropertyTypes` (see ADR 0001).
