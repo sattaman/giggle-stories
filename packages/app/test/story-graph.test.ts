@@ -47,6 +47,9 @@ describe("story graph", () => {
     expect(done.performance.every((s) => s.audioUrl !== null)).toBe(true);
     expect(progress.segments.sort()).toEqual([0, 1, 2, 3]);
     expect(model.calls.filter((t) => t === "decide_clarification")).toHaveLength(2);
+    // Drafted before review, redrafted after the outline changed; nothing written after "Yes!".
+    expect(model.calls.filter((t) => t === "write_page")).toHaveLength(2);
+    expect(model.calls.at(-1)).toBe("write_page");
   });
 
   it("never asks more than two questions", async () => {

@@ -1,9 +1,13 @@
 // The story workflow as a LangGraph state machine.
 //
 //   START → understand ─(question?)→ askQuestion ⏸ ─→ understand   (max 2 rounds)
-//                └─(ready)→ castCharacters ─┬→ designVoices ─┐
-//                                          └→ planOutline ──┴→ reviewOutline ⏸ ─(changes)→ reviseOutline ─→ reviewOutline
-//                                                                    └─(yes!)→ writePage → performPage → END
+//                └─(ready)→ castCharacters ─┬→ designVoices ────────────────┐
+//                                          └→ planOutline → draftPage ─────┴→ reviewOutline ⏸
+//   reviewOutline ─(changes)→ reviseOutline → redraftPage → reviewOutline
+//                 └─(yes!)→ performPage → END
+//
+// Page 1 is drafted while voices are designed (both slow), so after "Yes!" the child
+// only waits for the first line of audio.
 //
 // Rules (docs/research/langgraph-js.md): nodes with side effects (LLM, TTS, voice
 // design) are never the ones that interrupt — a resumed node re-runs from the top.
@@ -189,7 +193,7 @@ const planOutline: Node = async (state, config) => {
 const reviewOutline: Node = (state) => {
   const decision = interrupt<Pending, OutlineDecision>({ kind: "outline_review", outline: required(state.outline, "outline") });
   return decision.approved
-    ? new Command({ update: { outlineFeedback: undefined }, goto: "writePage" })
+    ? new Command({ update: { outlineFeedback: undefined }, goto: "performPage" })
     : new Command({ update: { outlineFeedback: decision.feedback }, goto: "reviseOutline" });
 };
 
@@ -205,9 +209,9 @@ const reviseOutline: Node = async (state, config) => {
   return { outline: revised };
 };
 
-const writePage: Node = async (state, config) => {
+const draftPage: Node = async (state, config) => {
   const deps = depsOf(config);
-  deps.progress.stage(state.storyId, "writing", "Writing page one…");
+  deps.progress.stage(state.storyId, "writing", "Getting page one ready…");
   const script = await new StoryWriter(deps.model).writePage(
     required(state.brief, "brief"),
     state.cast,
@@ -249,9 +253,11 @@ export function buildStoryGraph() {
     .addNode("castCharacters", castCharacters)
     .addNode("designVoices", designVoices)
     .addNode("planOutline", planOutline)
-    .addNode("reviewOutline", reviewOutline, { ends: ["writePage", "reviseOutline"] })
+    .addNode("draftPage", draftPage)
+    .addNode("reviewOutline", reviewOutline, { ends: ["performPage", "reviseOutline"] })
     .addNode("reviseOutline", reviseOutline)
-    .addNode("writePage", writePage)
+    // Same work as draftPage; a separate node because the join below fires only once.
+    .addNode("redraftPage", draftPage)
     .addNode("performPage", performPage)
     .addEdge(START, "understand")
     .addConditionalEdges("understand", (state) => (state.pendingQuestion === undefined ? "castCharacters" : "askQuestion"), [
@@ -260,9 +266,10 @@ export function buildStoryGraph() {
     ])
     .addEdge("castCharacters", "designVoices")
     .addEdge("castCharacters", "planOutline")
-    .addEdge(["designVoices", "planOutline"], "reviewOutline")
-    .addEdge("reviseOutline", "reviewOutline")
-    .addEdge("writePage", "performPage")
+    .addEdge("planOutline", "draftPage")
+    .addEdge(["designVoices", "draftPage"], "reviewOutline")
+    .addEdge("reviseOutline", "redraftPage")
+    .addEdge("redraftPage", "reviewOutline")
     .addEdge("performPage", END);
 }
 
