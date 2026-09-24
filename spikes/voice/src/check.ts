@@ -7,7 +7,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { getCurrentRunTree } from "langsmith/traceable";
 import { z } from "zod";
-import { createClient, TTS_MODEL } from "./gemini.js";
+import { createClient, describeError, TTS_MODEL } from "./gemini.js";
 import { flushTraces, langsmith, traceable, tracedSynthesize, tracingEnabled } from "./tracing.js";
 import { durationMs, toWav } from "./wav.js";
 
@@ -75,6 +75,9 @@ async function main(): Promise<void> {
 
 try {
   await main();
+} catch (error: unknown) {
+  console.error(`\n✖ ${describeError(error)}`);
+  process.exitCode = 1;
 } finally {
   await flushTraces();
 }

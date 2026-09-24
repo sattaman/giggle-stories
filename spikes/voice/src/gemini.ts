@@ -24,7 +24,16 @@ const CreatedVoice = z.object({
 const VoiceCache = z.record(z.string(), z.object({ id: z.string(), descriptionHash: z.string() }));
 type VoiceCache = z.infer<typeof VoiceCache>;
 
-const ErrorWithStatus = z.object({ status: z.number() });
+const ErrorWithStatus = z.object({ status: z.number(), message: z.string().optional() });
+
+/** One-line description of an SDK error, e.g. for quota or safety rejections. */
+export function describeError(error: unknown): string {
+  const parsed = ErrorWithStatus.safeParse(error);
+  if (!parsed.success) return error instanceof Error ? error.message : String(error);
+  const message = parsed.data.message ?? "";
+  const detail = /"message": "([^"]+)"/.exec(message)?.[1] ?? message.split("\n")[0] ?? "";
+  return `${String(parsed.data.status)}: ${detail}`;
+}
 
 export interface Synthesis {
   readonly pcm: Buffer;
@@ -125,7 +134,10 @@ export async function ensureVoices(
 
 function isRetryable(error: unknown): boolean {
   const parsed = ErrorWithStatus.safeParse(error);
-  return parsed.success && (parsed.data.status === 429 || parsed.data.status >= 500);
+  if (!parsed.success) return false;
+  // A daily quota won't recover within our backoff window.
+  if (parsed.data.message?.includes("per day") === true) return false;
+  return parsed.data.status === 429 || parsed.data.status >= 500;
 }
 
 export interface SynthesisRequest {

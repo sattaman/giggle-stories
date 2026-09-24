@@ -12,7 +12,7 @@ import { parseArgs } from "node:util";
 import { z } from "zod";
 import { cast } from "./cast.js";
 import { uuid7 } from "langsmith";
-import { createClient, ensureVoices, TTS_MODEL, type Synthesis } from "./gemini.js";
+import { createClient, describeError, ensureVoices, TTS_MODEL, type Synthesis } from "./gemini.js";
 import { scene, type Segment } from "./scene.js";
 import { flushTraces, langsmith, publishPage, traceable, tracedDesignVoice, tracedSynthesize, tracingEnabled } from "./tracing.js";
 import { durationMs, silence, toWav } from "./wav.js";
@@ -206,4 +206,9 @@ async function main(): Promise<void> {
   }
 }
 
-await main();
+try {
+  await main();
+} catch (error: unknown) {
+  console.error(`\n✖ ${describeError(error)}`);
+  process.exitCode = 1;
+}
