@@ -1,0 +1,19 @@
+{
+  "name": "@storytime/domain",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json && tsc -p test/tsconfig.json",
+    "typecheck:compat": "tsc6 -p tsconfig.json && tsc6 -p test/tsconfig.json"
+  },
+  "dependencies": {
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "vitest": "^5.0.1"
+  }
+}

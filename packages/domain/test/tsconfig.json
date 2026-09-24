@@ -1,0 +1,7 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": { "module": "nodenext", "moduleResolution": "nodenext", "types": ["node"] },
+  "include": [".", "../src"],
+  // Node provides the real URL typings in tests.
+  "exclude": ["../src/platform-globals.d.ts"]
+}

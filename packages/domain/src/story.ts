@@ -1,0 +1,116 @@
+// The story domain: what a child's story is made of, independent of any LLM,
+// TTS provider, framework or platform. Every schema here is also the runtime
+// validator for data crossing a boundary (LLM output, HTTP bodies).
+
+import { z } from "zod";
+
+export const MAX_CLARIFICATIONS = 2;
+export const OUTLINE_PAGES = 6;
+
+/** Stable, URL-safe id derived from the character's name, e.g. "sir-reginald". */
+export const CharacterId = z
+  .string()
+  .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "lower-case-kebab id")
+  .max(40);
+export type CharacterId = z.infer<typeof CharacterId>;
+
+export const NARRATOR = "narrator";
+export const SpeakerId = z.union([z.literal(NARRATOR), CharacterId]);
+export type SpeakerId = z.infer<typeof SpeakerId>;
+
+// ── The brief: what the child asked for ─────────────────────────────────────
+
+export const CharacterSketch = z.object({
+  name: z.string().min(1).max(60).describe("Exactly as the child said it. Never rename."),
+  role: z.enum(["hero", "sidekick", "villain", "friend", "grown-up", "creature", "other"]),
+  details: z.string().max(300).describe("Everything the child said about this character, in their words."),
+});
+export type CharacterSketch = z.infer<typeof CharacterSketch>;
+
+export const StoryBrief = z.object({
+  premise: z.string().min(1).max(500).describe("One or two sentences: what the story is about."),
+  characters: z.array(CharacterSketch).max(6),
+  setting: z.string().max(200).describe("Where it happens, or empty if not given."),
+  tone: z.string().max(120).describe("e.g. silly, exciting, spooky-but-fun. Default: funny adventure."),
+  childIdeas: z
+    .array(z.string().max(200))
+    .max(12)
+    .describe("Specific ideas the child asked for, verbatim-ish. Every one must appear in the story."),
+});
+export type StoryBrief = z.infer<typeof StoryBrief>;
+
+export const ClarificationDecision = z.discriminatedUnion("decision", [
+  z.object({ decision: z.literal("ready"), reason: z.string().max(300) }),
+  z.object({
+    decision: z.literal("ask"),
+    reason: z.string().max(300),
+    question: z.string().min(1).max(200).describe("ONE short, fun question a child can answer out loud."),
+  }),
+]);
+export type ClarificationDecision = z.infer<typeof ClarificationDecision>;
+
+// ── The cast ─────────────────────────────────────────────────────────────────
+
+export const CharacterProfile = z.object({
+  id: CharacterId,
+  name: z.string().min(1).max(60),
+  role: CharacterSketch.shape.role,
+  emoji: z.string().min(1).max(8).describe("One emoji for the character card."),
+  colour: z.string().regex(/^#[0-9a-fA-F]{6}$/).describe("Card colour, hex."),
+  personality: z.string().max(200),
+  comicTrait: z.string().max(160).describe("The one funny thing about them."),
+  catchphrase: z.string().max(80).optional(),
+  gender: z.enum(["female", "male", "neutral"]),
+  voiceDescription: z
+    .string()
+    .min(20)
+    .max(300)
+    .describe("1–2 sentences describing how the voice SOUNDS. Never age, childhood or real people."),
+});
+export type CharacterProfile = z.infer<typeof CharacterProfile>;
+
+export const VoiceAssignment = z.object({
+  voiceId: z.string().min(1),
+  source: z.enum(["designed", "catalog"]),
+});
+export type VoiceAssignment = z.infer<typeof VoiceAssignment>;
+
+export const Character = CharacterProfile.extend({ voice: VoiceAssignment.optional() });
+export type Character = z.infer<typeof Character>;
+
+export const Cast = z.object({ characters: z.array(CharacterProfile).min(1).max(6) });
+export type Cast = z.infer<typeof Cast>;
+
+// ── Outline ──────────────────────────────────────────────────────────────────
+
+export const OutlinePage = z.object({
+  page: z.number().int().min(1).max(OUTLINE_PAGES),
+  beat: z.string().min(1).max(240).describe("What happens, in one child-friendly sentence."),
+  funnyMoment: z.string().max(200),
+});
+export type OutlinePage = z.infer<typeof OutlinePage>;
+
+export const Outline = z.object({
+  title: z.string().min(1).max(80),
+  pages: z.array(OutlinePage).length(OUTLINE_PAGES),
+});
+export type Outline = z.infer<typeof Outline>;
+
+// ── Performance script ───────────────────────────────────────────────────────
+
+export const Segment = z.object({
+  speaker: SpeakerId,
+  text: z
+    .string()
+    .min(1)
+    .max(400)
+    .describe("Spoken verbatim. No stage directions. Optional vocal tags like <giggle>, <gasp>, <short pause>."),
+  style: z.string().max(80).describe("Short acting note, e.g. 'excited whisper', 'deadpan'."),
+});
+export type Segment = z.infer<typeof Segment>;
+
+export const PageScript = z.object({
+  page: z.number().int().min(1).max(OUTLINE_PAGES),
+  segments: z.array(Segment).min(4).max(40),
+});
+export type PageScript = z.infer<typeof PageScript>;

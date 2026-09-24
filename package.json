@@ -7,12 +7,13 @@
     "node": ">=22.18"
   },
   "scripts": {
-    "typecheck": "pnpm -r --parallel exec tsc --noEmit --pretty false",
-    "typecheck:compat": "pnpm -r --parallel exec tsc6 --noEmit --pretty false",
+    "typecheck": "pnpm -r --parallel run typecheck",
+    "typecheck:compat": "pnpm -r --parallel run typecheck:compat",
     "lint": "eslint . --max-warnings 0",
-    "check": "pnpm typecheck && pnpm typecheck:compat && pnpm lint",
+    "check": "pnpm typecheck && pnpm typecheck:compat && pnpm lint && pnpm test",
     "spike:voice": "pnpm --filter @storytime/spike-voice start",
-    "spike:check": "pnpm --filter @storytime/spike-voice check"
+    "spike:check": "pnpm --filter @storytime/spike-voice check",
+    "test": "pnpm -r --parallel run test"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -76,6 +76,11 @@
     "skipLibCheck": false,
 
     "target": "ES2023",
+
+    // Workspace packages are consumed as TypeScript source (tsx on the server,
+    // Metro in the Expo client), so nothing emits and imports use .ts extensions.
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
     "lib": ["ES2023"]
   }
 }

@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // Platform-neutral: no Node or DOM types, so it runs on Hermes (mobile) too.
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "types": []
+  },
+  "include": ["src"]
+}

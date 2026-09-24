@@ -4,7 +4,9 @@
   "type": "module",
   "scripts": {
     "start": "tsx src/main.ts",
-    "check": "tsx src/check.ts"
+    "check": "tsx src/check.ts",
+    "typecheck": "tsc",
+    "typecheck:compat": "tsc6"
   },
   "dependencies": {
     "@google/genai": "^2.24.0",
