@@ -83,7 +83,7 @@ const understand: Node = async (state, config) => {
 
   const decision = await writer.decide(brief, state.answers);
   deps.log.info({ storyId: state.storyId, decision: decision.decision, reason: decision.reason }, "clarification decision");
-  if (decision.decision === "ready") return { brief, pendingQuestion: undefined };
+  if (decision.decision === "ready" || decision.question.trim() === "") return { brief, pendingQuestion: undefined };
 
   // Voice the question before pausing (side effects never live in interrupt nodes).
   let audioUrl: string | null = null;

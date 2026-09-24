@@ -24,6 +24,9 @@ importers:
       eslint:
         specifier: ^10.11.0
         version: 10.11.0
+      tsx:
+        specifier: ^4.23.15
+        version: 4.23.15
       typescript:
         specifier: npm:@typescript/typescript6@^6.0.2
         version: '@typescript/typescript6@6.0.2'
@@ -31,20 +34,48 @@ importers:
         specifier: ^8.70.1
         version: 8.70.1(@typescript/typescript6@6.0.2)(eslint@10.11.0)
 
-  packages/app:
+  packages/adapters:
     dependencies:
+      '@google/genai':
+        specifier: ^2.24.0
+        version: 2.24.0
       '@langchain/core':
         specifier: 1.2.12
-        version: 1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(ws@8.21.3)
-      '@langchain/langgraph':
-        specifier: 1.4.17
-        version: 1.4.17(@langchain/core@1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(ws@8.21.3))(zod@4.6.5)
+        version: 1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)
+      '@langchain/openrouter':
+        specifier: 0.4.13
+        version: 0.4.13(@langchain/core@1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))(ws@8.21.3)(zod@4.6.5)
+      '@storytime/app':
+        specifier: workspace:*
+        version: link:../app
       '@storytime/domain':
         specifier: workspace:*
         version: link:../domain
       langsmith:
         specifier: ^0.10.5
-        version: 0.10.5(patch_hash=bf58cd0fb7491cacb9982eeb3652117eed946755142b443cd6b2246f8cc9ffd6)(ws@8.21.3)
+        version: 0.10.5(patch_hash=bf58cd0fb7491cacb9982eeb3652117eed946755142b443cd6b2246f8cc9ffd6)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
+    devDependencies:
+      vitest:
+        specifier: ^5.0.1
+        version: 5.0.1(@types/node@22.20.4)(vite@8.3.0(@types/node@22.20.4)(esbuild@0.28.2)(tsx@4.23.15))
+
+  packages/app:
+    dependencies:
+      '@langchain/core':
+        specifier: 1.2.12
+        version: 1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)
+      '@langchain/langgraph':
+        specifier: 1.4.17
+        version: 1.4.17(@langchain/core@1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))(zod@4.6.5)
+      '@storytime/domain':
+        specifier: workspace:*
+        version: link:../domain
+      langsmith:
+        specifier: ^0.10.5
+        version: 0.10.5(patch_hash=bf58cd0fb7491cacb9982eeb3652117eed946755142b443cd6b2246f8cc9ffd6)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)
       zod:
         specifier: ^4.6.5
         version: 4.6.5
@@ -70,7 +101,7 @@ importers:
         version: 2.24.0
       langsmith:
         specifier: ^0.10.5
-        version: 0.10.5(patch_hash=bf58cd0fb7491cacb9982eeb3652117eed946755142b443cd6b2246f8cc9ffd6)(ws@8.21.3)
+        version: 0.10.5(patch_hash=bf58cd0fb7491cacb9982eeb3652117eed946755142b443cd6b2246f8cc9ffd6)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)
       zod:
         specifier: ^4.6.5
         version: 4.6.5
@@ -361,6 +392,18 @@ packages:
     peerDependencies:
       '@langchain/core': ^1.1.48
       zod: ^3.25.32 || ^4.2.0
+
+  '@langchain/openai@1.5.13':
+    resolution: {integrity: sha512-SA1QWNgM/p8xhdwU82CJ7OofhHEExpAaIwJ7j9ELIyVW795Mn0jDRQO/5yChawLcPhuLkeL+jMesi0FnXbImSg==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      '@langchain/core': ^1.2.11
+
+  '@langchain/openrouter@0.4.13':
+    resolution: {integrity: sha512-aGnFsnNxBvd5gpXLr1vHhjgtBKdiI5XD0iYYG0Zjuokf+QfTh/0cDLxjDm6M02fsgXr4XkX6LY7heoSk+4qBaA==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      '@langchain/core': ^1.0.0
 
   '@langchain/protocol@0.0.19':
     resolution: {integrity: sha512-9hKcRrH7cBX6gfutdfXPoft1OCchHe4FEpALoDJMl5Qu+n/YG5ynZmyu8+8cxORlPwHBoKTxggvXz+76M1yX1Q==}
@@ -850,6 +893,10 @@ packages:
   eventemitter3@5.0.4:
     resolution: {integrity: sha512-mlsTRyGaPBjPedk6Bvw+aqbsXDtoAyAzm5MO7JgU+yVRyMQ5O8bD4Kcci7BS85f93veegeCPkL8R4GLClnjLFw==}
 
+  eventsource-parser@4.1.1:
+    resolution: {integrity: sha512-zaWNqeSLeyzEAAt2Q6aDBRDRk/VnPmsKqvToyGvv6aahvLv71A4Jw7jG93Hckf11zXurbqgsffvpSgKPoeU1Qw==}
+    engines: {node: '>=22.12'}
+
   expect-type@1.4.0:
     resolution: {integrity: sha512-KfYbmpRm0VbLjEvVa9yGwCi9GI34xvi7A/HXYWQO65CSD2u3MczUJSuwXKFIxlGsgBQizV9q5J9NHj4VG0n+pA==}
     engines: {node: '>=12.0.0'}
@@ -1122,6 +1169,30 @@ packages:
   obug@2.2.1:
     resolution: {integrity: sha512-XrsrhT5sybtKI6wakr2SPOlGZWWYbUXZ7a0jT8/QOeAPau+1X/bSegNe5YR75oJmEZQbKningirmGOEJCIk61Q==}
     engines: {node: '>=12.20.0'}
+
+  openai@7.23.0:
+    resolution: {integrity: sha512-0ecOXnFSMNWZq6cUBcTV6Lf93y+fm8BH/+QzFvpoP1UGNOE5pnytRa6HAPGCw+3IS9SIAW7rc1M8yyzN1PiBAQ==}
+    engines: {node: '>=22.0.0'}
+    peerDependencies:
+      '@aws-sdk/credential-provider-node': '>=3.972.0 <4'
+      '@smithy/hash-node': '>=4.3.0 <5'
+      '@smithy/signature-v4': '>=5.4.0 <6'
+      undici: '>=5 <9'
+      ws: ^8.21.0
+      zod: ^3.25 || ^4.0
+    peerDependenciesMeta:
+      '@aws-sdk/credential-provider-node':
+        optional: true
+      '@smithy/hash-node':
+        optional: true
+      '@smithy/signature-v4':
+        optional: true
+      undici:
+        optional: true
+      ws:
+        optional: true
+      zod:
+        optional: true
 
   optionator@0.9.4:
     resolution: {integrity: sha512-6IpQ7mKUxRcZNLIObR0hz7lxsapSSIYNZJwXPGeF0mTVqGKFIXj1DQcMoT22S3ROcLyY/rz0PWaWZ9ayWmad9g==}
@@ -1579,12 +1650,12 @@ snapshots:
 
   '@keyv/serialize@1.1.1': {}
 
-  '@langchain/core@1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(ws@8.21.3)':
+  '@langchain/core@1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)':
     dependencies:
       '@cfworker/json-schema': 4.1.1
       '@standard-schema/spec': 1.1.0
       js-tiktoken: 1.0.21
-      langsmith: 0.10.5(patch_hash=bf58cd0fb7491cacb9982eeb3652117eed946755142b443cd6b2246f8cc9ffd6)(ws@8.21.3)
+      langsmith: 0.10.5(patch_hash=bf58cd0fb7491cacb9982eeb3652117eed946755142b443cd6b2246f8cc9ffd6)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)
       mustache: 4.2.0
       p-queue: 6.6.2
       zod: 4.6.5
@@ -1595,29 +1666,56 @@ snapshots:
       - openai
       - ws
 
-  '@langchain/langgraph-checkpoint@1.1.5(@langchain/core@1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(ws@8.21.3))':
+  '@langchain/langgraph-checkpoint@1.1.5(@langchain/core@1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))':
     dependencies:
-      '@langchain/core': 1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(ws@8.21.3)
+      '@langchain/core': 1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)
 
-  '@langchain/langgraph-sdk@1.11.2(@langchain/core@1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(ws@8.21.3))':
+  '@langchain/langgraph-sdk@1.11.2(@langchain/core@1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))':
     dependencies:
-      '@langchain/core': 1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(ws@8.21.3)
+      '@langchain/core': 1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)
       '@langchain/protocol': 0.0.19
       '@types/json-schema': 7.0.15
       p-queue: 9.3.3
       p-retry: 7.1.1
 
-  '@langchain/langgraph@1.4.17(@langchain/core@1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(ws@8.21.3))(zod@4.6.5)':
+  '@langchain/langgraph@1.4.17(@langchain/core@1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))(zod@4.6.5)':
     dependencies:
-      '@langchain/core': 1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(ws@8.21.3)
-      '@langchain/langgraph-checkpoint': 1.1.5(@langchain/core@1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(ws@8.21.3))
-      '@langchain/langgraph-sdk': 1.11.2(@langchain/core@1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(ws@8.21.3))
+      '@langchain/core': 1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)
+      '@langchain/langgraph-checkpoint': 1.1.5(@langchain/core@1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))
+      '@langchain/langgraph-sdk': 1.11.2(@langchain/core@1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))
       '@langchain/protocol': 0.0.19
       '@standard-schema/spec': 1.1.0
       zod: 4.6.5
     transitivePeerDependencies:
       - react
       - react-dom
+
+  '@langchain/openai@1.5.13(@langchain/core@1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))(ws@8.21.3)':
+    dependencies:
+      '@langchain/core': 1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)
+      js-tiktoken: 1.0.21
+      openai: 7.23.0(ws@8.21.3)(zod@4.6.5)
+      zod: 4.6.5
+    transitivePeerDependencies:
+      - '@aws-sdk/credential-provider-node'
+      - '@smithy/hash-node'
+      - '@smithy/signature-v4'
+      - undici
+      - ws
+
+  '@langchain/openrouter@0.4.13(@langchain/core@1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))(ws@8.21.3)(zod@4.6.5)':
+    dependencies:
+      '@langchain/core': 1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)
+      '@langchain/openai': 1.5.13(@langchain/core@1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))(ws@8.21.3)
+      eventsource-parser: 4.1.1
+      openai: 7.23.0(ws@8.21.3)(zod@4.6.5)
+    transitivePeerDependencies:
+      - '@aws-sdk/credential-provider-node'
+      - '@smithy/hash-node'
+      - '@smithy/signature-v4'
+      - undici
+      - ws
+      - zod
 
   '@langchain/protocol@0.0.19': {}
 
@@ -2041,6 +2139,8 @@ snapshots:
 
   eventemitter3@5.0.4: {}
 
+  eventsource-parser@4.1.1: {}
+
   expect-type@1.4.0: {}
 
   extend@3.0.2: {}
@@ -2175,10 +2275,11 @@ snapshots:
     dependencies:
       '@keyv/serialize': 1.1.1
 
-  langsmith@0.10.5(patch_hash=bf58cd0fb7491cacb9982eeb3652117eed946755142b443cd6b2246f8cc9ffd6)(ws@8.21.3):
+  langsmith@0.10.5(patch_hash=bf58cd0fb7491cacb9982eeb3652117eed946755142b443cd6b2246f8cc9ffd6)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3):
     dependencies:
       p-queue: 6.6.2
     optionalDependencies:
+      openai: 7.23.0(ws@8.21.3)(zod@4.6.5)
       ws: 8.21.3
 
   levn@0.4.1:
@@ -2266,6 +2367,11 @@ snapshots:
       formdata-polyfill: 4.0.10
 
   obug@2.2.1: {}
+
+  openai@7.23.0(ws@8.21.3)(zod@4.6.5):
+    optionalDependencies:
+      ws: 8.21.3
+      zod: 4.6.5
 
   optionator@0.9.4:
     dependencies:

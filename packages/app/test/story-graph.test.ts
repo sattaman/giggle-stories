@@ -33,13 +33,13 @@ describe("story graph", () => {
 
     const second = await graph.invoke(new Command({ resume: "Moon cheese!" }), config);
     if (!isInterrupted(second)) throw new Error("expected outline review");
-    expect(second[INTERRUPT][0]?.value).toMatchObject({ kind: "outline_review", outline: { title: "First plan" } });
+    expect(second[INTERRUPT][0]?.value).toMatchObject({ kind: "outline_review", outline: { storyTitle: "First plan" } });
     expect(second.answers).toEqual([{ question: "What is Pip looking for?", answer: "Moon cheese!" }]);
     expect(second.cast[0]?.voice).toMatchObject({ voiceId: "voice_pip", source: "designed" });
 
     const third = await graph.invoke(new Command({ resume: { approved: false, feedback: "Add a dog" } }), config);
     if (!isInterrupted(third)) throw new Error("expected second outline review");
-    expect(third[INTERRUPT][0]?.value).toMatchObject({ kind: "outline_review", outline: { title: "Revised plan" } });
+    expect(third[INTERRUPT][0]?.value).toMatchObject({ kind: "outline_review", outline: { storyTitle: "Revised plan" } });
 
     const done = await graph.invoke(new Command({ resume: { approved: true } }), config);
     expect(isInterrupted(done)).toBe(false);

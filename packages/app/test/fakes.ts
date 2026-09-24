@@ -36,8 +36,8 @@ export const cast: Cast = {
   ],
 };
 
-export const outline = (title: string): Outline => ({
-  title,
+export const outline = (storyTitle: string): Outline => ({
+  storyTitle,
   pages: [1, 2, 3, 4, 5, 6].map((page) => ({ page, beat: `beat ${String(page)}`, funnyMoment: "a joke" })),
 });
 
@@ -67,7 +67,7 @@ export class FakeModel implements StructuredModel {
 
 export const decisions = {
   ask: { decision: "ask", reason: "no problem yet", question: "What is Pip looking for?" } satisfies ClarificationDecision,
-  ready: { decision: "ready", reason: "enough" } satisfies ClarificationDecision,
+  ready: { decision: "ready", reason: "enough", question: "" } satisfies ClarificationDecision,
 };
 
 export class FakeVoices implements VoiceDesigner {

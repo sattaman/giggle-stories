@@ -26,7 +26,7 @@ Things to watch in play sessions (write them down; they matter more than any met
 | Monorepo | pnpm 11 workspaces |
 | Validation/types | zod 4 (the same schemas are shared by server, web and later mobile) |
 | Orchestration | @langchain/langgraph 1.4 (Graph API, StateSchema, interrupts) |
-| LLM | @langchain/openrouter behind a `StoryWriter` port; try 2–3 models |
+| LLM | @langchain/openrouter behind a `StructuredModel` port. Default: GPT-6 Luna Pro (creative) + GPT-6 Luna (fast). Sonnet 5 ruled out on cost |
 | TTS + voices + STT | @google/genai 2.24 → `gemini-3.8-flash-tts`, Voice Design, `gemini-3.5-transcribe` (Google's Gemini API directly, not OpenRouter) |
 | Observability | LangSmith (EU endpoint) + pino structured logs + a folder of files per run |
 | Evals | langsmith/vitest + openevals |

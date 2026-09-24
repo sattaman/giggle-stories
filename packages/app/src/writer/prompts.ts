@@ -18,7 +18,8 @@ Non-negotiable rules:
 - Never ask for or invent personal details about the child (surname, school, address, age, looks).`;
 
 export const EXTRACT_BRIEF = `Turn the child's story idea (and any answers they have given) into a brief.
-Record characters exactly as named. Put every specific thing the child asked for into childIdeas.
+Record characters exactly as named. Do NOT list the narrator as a character.
+Put every specific thing the child asked for into childIdeas.
 If the child didn't give a tone, use "funny adventure". Leave setting empty if not given.`;
 
 export const DECIDE = `Decide whether we need to ask the child ONE question before writing, or are ready.
@@ -29,8 +30,9 @@ Ask ONLY if something important is missing that would really change the story, t
 Otherwise answer "ready": you can invent the rest brilliantly yourself. Don't ask about small details,
 names of extra characters, or anything you can make up. Never ask more than needed.
 
-If you ask: ONE short, fun question a child can answer out loud in a few words, ideally offering two or three
-playful options, e.g. "Is the dragon friendly, grumpy, or a bit of both?" Speak directly to the child.`;
+If you ask: ONE short, fun question (under 15 words) a child can answer out loud in a few words.
+Offer at most two playful options. Speak directly to the child. E.g. "Is the dragon friendly or grumpy?"
+Keep "reason" to one short sentence. When ready, set question to "".`;
 
 export const CAST = `Create the cast for this story.
 

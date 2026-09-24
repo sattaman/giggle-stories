@@ -31,7 +31,7 @@ export interface QuestionAndAnswer {
   readonly answer: string;
 }
 
-const VoiceRewrite = z.object({ voiceDescription: z.string().min(20).max(300) });
+const VoiceRewrite = z.object({ voiceDescription: z.string().min(20).max(600) });
 
 export class StoryWriter {
   constructor(private readonly model: StructuredModel) {}
