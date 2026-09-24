@@ -10,6 +10,19 @@ import Fastify, { type FastifyBaseLogger, type FastifyInstance } from "fastify";
 import { z } from "zod";
 import { StoryConflictError, StoryNotFoundError, type StoryService } from "./story-service.ts";
 
+class BadRequestError extends Error {
+  constructor(readonly issues: z.core.$ZodIssue[]) {
+    super("Invalid request");
+  }
+}
+
+/** Validates client input: failures are 400s. (Other zod failures are upstream bugs → 502.) */
+function parseRequest<S extends z.ZodType>(schema: S, value: unknown): z.infer<S> {
+  const result = schema.safeParse(value);
+  if (!result.success) throw new BadRequestError(result.error.issues);
+  return result.data;
+}
+
 const StoryParams = z.object({ id: z.string().regex(/^story_[a-z0-9]+$/) });
 const AudioParams = z.object({ story: z.string(), file: z.string() });
 
@@ -28,7 +41,11 @@ export async function buildHttp(deps: HttpDeps): Promise<FastifyInstance> {
   app.setErrorHandler((error: unknown, _request, reply) => {
     if (error instanceof StoryNotFoundError) return reply.code(404).send({ error: "Story not found" });
     if (error instanceof StoryConflictError) return reply.code(409).send({ error: error.message });
-    if (error instanceof z.ZodError) return reply.code(400).send({ error: "Invalid request", issues: error.issues });
+    if (error instanceof BadRequestError) return reply.code(400).send({ error: error.message, issues: error.issues });
+    if (error instanceof z.ZodError) {
+      app.log.error({ issues: error.issues }, "upstream response failed validation");
+      return reply.code(502).send({ error: "A story service sent something unexpected" });
+    }
     app.log.error({ error: error instanceof Error ? error.stack : String(error) }, "request failed");
     return reply.code(500).send({ error: "Something went wrong" });
   });
@@ -47,22 +64,22 @@ export async function buildHttp(deps: HttpDeps): Promise<FastifyInstance> {
   });
 
   app.post("/v1/stories", async (request, reply) => {
-    const { idea } = StartStoryBody.parse(request.body);
+    const { idea } = parseRequest(StartStoryBody, request.body);
     return reply.code(201).send(await deps.stories.start(idea));
   });
 
   app.get("/v1/stories/:id", async (request) => {
-    const { id } = StoryParams.parse(request.params);
+    const { id } = parseRequest(StoryParams, request.params);
     return deps.stories.view(id);
   });
 
   app.post("/v1/stories/:id/replies", async (request) => {
-    const { id } = StoryParams.parse(request.params);
-    return deps.stories.reply(id, ReplyBody.parse(request.body));
+    const { id } = parseRequest(StoryParams, request.params);
+    return deps.stories.reply(id, parseRequest(ReplyBody, request.body));
   });
 
   app.get("/v1/audio/:story/:file", async (request, reply) => {
-    const { story, file } = AudioParams.parse(request.params);
+    const { story, file } = parseRequest(AudioParams, request.params);
     const path = deps.audioPath(story, file);
     if (path === undefined) return reply.code(404).send({ error: "Not found" });
     try {

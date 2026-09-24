@@ -73,10 +73,10 @@ export const decisions = {
 export class FakeVoices implements VoiceDesigner {
   readonly designed: string[] = [];
   constructor(private readonly reject = false) {}
-  design(request: { name: string; description: string }): Promise<{ voiceId: string }> {
+  design(request: { name: string; description: string }): Promise<{ voiceId: string; preview: Uint8Array | undefined }> {
     if (this.reject) return Promise.reject(new VoiceRejectedError("blocked by safety policies"));
     this.designed.push(request.description);
-    return Promise.resolve({ voiceId: `voice_${request.name.toLowerCase()}` });
+    return Promise.resolve({ voiceId: `voice_${request.name.toLowerCase()}`, preview: new Uint8Array([7]) });
   }
   fallback(gender: string, index: number): string {
     return `catalog_${gender}_${String(index)}`;

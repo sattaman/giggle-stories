@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { playbackReducer, type PlaybackEvent, type PlaybackState, type Track } from "../src/story/playback.ts";
+import { playbackReducer, sourceFor, trackOf, type PlaybackEvent, type PlaybackState, type Track } from "../src/story/playback.ts";
 
 const track = (ready: boolean[], complete = false): Track => ({ ready, complete });
 
@@ -57,5 +57,14 @@ describe("playback queue", () => {
     const t = track([true, true], true);
     const finished: PlaybackState = { phase: "finished", run: 1 };
     assert.deepEqual(playbackReducer(finished, { type: "start" }, t), { phase: "playing", index: 0, run: 2 });
+  });
+
+  it("reads unvoiced lines silently once complete, instead of dropping them", () => {
+    const line = { index: 0, speaker: "narrator", text: "Hello <giggle> there", style: "", audioUrl: null, durationMs: null };
+    assert.equal(sourceFor(line, false), null);
+    assert.deepEqual(sourceFor(line, true), { url: "silent:unvoiced", durationMs: 2300 });
+    assert.deepEqual(sourceFor({ ...line, audioUrl: "http://x/a.wav", durationMs: 900 }, false), { url: "http://x/a.wav", durationMs: 900 });
+    assert.deepEqual(trackOf([line], false).ready, [false]);
+    assert.deepEqual(trackOf([line], true).ready, [true]);
   });
 });

@@ -62,7 +62,7 @@ export function OutlineReview({ outline, characters, onApprove, onChange }: Outl
       {changing ? (
         <View style={styles.change}>
           <Text style={text.heading}>What should I change?</Text>
-          <SpeechInput submitLabel="Change it!" placeholder="e.g. Make the frog a pirate too" onSubmit={onChange} />
+          <SpeechInput submitLabel="Change it!" placeholder="e.g. Make the frog a pirate too" onSubmit={onChange} onListen={clips.stop} />
           <BigButton
             variant="ghost"
             size="small"

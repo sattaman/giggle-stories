@@ -41,7 +41,7 @@ export function ClarificationView({ question, audioUrl, onAnswer }: Clarificatio
           />
         )}
       </View>
-      <SpeechInput submitLabel="That's my answer!" placeholder="Type your answer…" onSubmit={onAnswer} />
+      <SpeechInput submitLabel="That's my answer!" placeholder="Type your answer…" onSubmit={onAnswer} onListen={clips.stop} />
     </View>
   );
 }

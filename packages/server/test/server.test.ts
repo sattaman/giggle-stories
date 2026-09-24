@@ -93,6 +93,18 @@ describe("http", () => {
     expect((await server.inject({ method: "GET", url: "/v1/stories/../../etc" })).statusCode).toBe(404);
   });
 
+  it("reports upstream validation failures as 502, not 400", async () => {
+    const { z } = await import("zod");
+    const server = await buildHttp({
+      stories: { ...stories, start: () => Promise.reject(z.string().safeParse(1).error ?? new Error("x")) },
+      transcriber: { transcribe: () => Promise.resolve("") },
+      audioPath: () => undefined,
+      logger: false,
+    });
+    const res = await server.inject({ method: "POST", url: "/v1/stories", payload: { idea: "a rocket" } });
+    expect(res.statusCode).toBe(502);
+  });
+
   it("returns 409 when replying out of turn", async () => {
     const res = await (await app()).inject({
       method: "POST",

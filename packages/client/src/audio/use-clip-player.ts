@@ -1,7 +1,7 @@
 // One-off clips: the spoken question and each character's "hear my voice" sample.
 
 import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { SILENT_AUDIO_PREFIX } from "../api/story-api.ts";
 
 export interface ClipPlayer {
@@ -15,6 +15,18 @@ export function useClipPlayer(): ClipPlayer {
   const player = useAudioPlayer(null, { updateInterval: 250 });
   const status = useAudioPlayerStatus(player);
   const [url, setUrl] = useState<string | null>(null);
+
+  // Hush the clip when the screen goes away.
+  useEffect(
+    () => () => {
+      try {
+        player.pause();
+      } catch {
+        // Already released by expo-audio: nothing left to stop.
+      }
+    },
+    [player],
+  );
 
   return {
     playingUrl: status.playing ? url : null,

@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { FsAudioStore } from "../src/fs/fs-audio-store.ts";
+import { retryDelayMs } from "../src/gemini/gemini.ts";
 import { durationMs, silence, toPcm, toWav } from "../src/gemini/wav.ts";
 
 describe("wav helpers", () => {
@@ -34,5 +35,14 @@ describe("FsAudioStore", () => {
     await expect(store.save("../etc", "passwd", new Uint8Array())).rejects.toThrow(/Unsafe/);
     expect(store.pathFor("story", "../../secret.wav")).toBeUndefined();
     expect(store.pathFor("story", "page-1-00.wav")).toBe(join(tmpdir(), "story", "page-1-00.wav"));
+  });
+});
+
+describe("retryDelayMs", () => {
+  it("parses Gemini's retry hints", () => {
+    expect(retryDelayMs("Please retry in 22s or upgrade")).toBe(22_000);
+    expect(retryDelayMs("Please retry in 1h16m13s or upgrade")).toBe((3600 + 16 * 60 + 13) * 1000);
+    expect(retryDelayMs("Please retry in 2.5s")).toBe(2500);
+    expect(retryDelayMs("no hint here")).toBeUndefined();
   });
 });

@@ -23,8 +23,14 @@ export class VoiceRejectedError extends Error {
 }
 
 export interface VoiceDesigner {
-  /** Creates a persistent voice from a description. Throws VoiceRejectedError on safety blocks. */
-  design(request: { readonly name: string; readonly gender: "female" | "male" | "neutral"; readonly description: string }): Promise<{ readonly voiceId: string }>;
+  /**
+   * Creates a persistent voice from a description. Throws VoiceRejectedError on safety blocks.
+   * `preview` is a short WAV of the new voice, when the provider supplies one.
+   */
+  design(request: { readonly name: string; readonly gender: "female" | "male" | "neutral"; readonly description: string }): Promise<{
+    readonly voiceId: string;
+    readonly preview: Uint8Array | undefined;
+  }>;
   /** A ready-made voice to use when design fails. */
   fallback(gender: "female" | "male" | "neutral", index: number): string;
 }

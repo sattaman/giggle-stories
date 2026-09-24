@@ -7,6 +7,7 @@ import {
   INITIAL_PLAYBACK,
   orderedSegments,
   playbackReducer,
+  sourceFor,
   trackOf,
   type PlaybackEvent,
   type PlaybackState,
@@ -65,10 +66,11 @@ export function usePlayback(performance: Performance): Playback {
           return;
         }
         const segment = latest.current.segments[state.index];
-        if (segment?.audioUrl == null) return;
+        const source = segment === undefined ? null : sourceFor(segment, latest.current.track.complete);
+        if (source === null) return;
         loadedKey.current = key;
         const { index, run } = state;
-        segmentPlayer.play(segment.audioUrl, segment.durationMs, () => {
+        segmentPlayer.play(source.url, source.durationMs, () => {
           dispatch({ type: "segmentEnded", index, run });
         });
         return;

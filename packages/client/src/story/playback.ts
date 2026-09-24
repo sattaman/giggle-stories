@@ -3,6 +3,8 @@
 // The audio player (use-playback.ts) only follows what this machine says.
 
 import type { Performance, PerformedSegment } from "@storytime/domain";
+import { SILENT_AUDIO_PREFIX } from "../api/story-api.ts";
+import { displayText, readingTimeMs } from "./lines.ts";
 
 export type PlaybackState =
   /** Before the first tap: browsers only allow sound after a user gesture. */
@@ -36,8 +38,24 @@ export function orderedSegments(performance: Performance): PerformedSegment[] {
   return [...performance.segments].sort((a, b) => a.index - b.index);
 }
 
+export interface LineSource {
+  readonly url: string;
+  readonly durationMs: number | null;
+}
+
+/**
+ * What to play for a line: its audio, or, once the performance is complete and
+ * the server couldn't voice it, a silent pause long enough to read it, so the
+ * story still makes sense. Null while the audio may yet arrive.
+ */
+export function sourceFor(segment: PerformedSegment, complete: boolean): LineSource | null {
+  if (segment.audioUrl !== null) return { url: segment.audioUrl, durationMs: segment.durationMs };
+  if (!complete) return null;
+  return { url: `${SILENT_AUDIO_PREFIX}unvoiced`, durationMs: readingTimeMs(displayText(segment.text)) };
+}
+
 export function trackOf(segments: readonly PerformedSegment[], complete: boolean): Track {
-  return { ready: segments.map((s) => s.audioUrl !== null), complete };
+  return { ready: segments.map((s) => sourceFor(s, complete) !== null), complete };
 }
 
 export function playbackReducer(state: PlaybackState, event: PlaybackEvent, track: Track): PlaybackState {

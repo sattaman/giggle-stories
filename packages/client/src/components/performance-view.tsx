@@ -53,6 +53,8 @@ export function PerformanceView({ performance, characters, title, onAnotherStory
         <SpeechBubble speaker={memberFor(cast, "narrator")} text={null} lineKey="waiting" />
       )}
 
+      {state.phase === "waiting" && <Text style={text.body}>Getting the next voice ready…</Text>}
+
       {(state.phase === "playing" || state.phase === "waiting" || state.phase === "paused") && (
         <View style={styles.controls}>
           {state.phase === "paused" ? (

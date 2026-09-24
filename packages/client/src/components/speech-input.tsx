@@ -16,14 +16,21 @@ export interface SpeechInputProps {
   readonly placeholder: string;
   /** Resolves false if sending failed, so the child can try again. */
   readonly onSubmit: (text: string) => Promise<boolean>;
+  /** Called just before the mic opens, e.g. to hush any clip that's playing. */
+  readonly onListen?: () => void;
 }
 
 /** Say it (tap the mic) or type it, check it, send it. */
-export function SpeechInput({ submitLabel, placeholder, onSubmit }: SpeechInputProps) {
+export function SpeechInput({ submitLabel, placeholder, onSubmit, onListen }: SpeechInputProps) {
   const speech = useSpeechInput(useStoryApi());
   const [sending, setSending] = useState(false);
   const [sendFailed, setSendFailed] = useState(false);
   const { state } = speech;
+
+  function listen(): void {
+    onListen?.();
+    void speech.startRecording();
+  }
 
   async function submit(value: string): Promise<void> {
     const trimmed = value.trim();
@@ -67,7 +74,7 @@ export function SpeechInput({ submitLabel, placeholder, onSubmit }: SpeechInputP
               variant="soft"
               label={state.source === "voice" ? "🎤 Try again" : "🎤 Use the mic"}
               disabled={sending}
-              onPress={() => void speech.startRecording()}
+              onPress={listen}
             />
           </View>
         </View>
@@ -83,7 +90,10 @@ export function SpeechInput({ submitLabel, placeholder, onSubmit }: SpeechInputP
             recording={state.kind === "recording"}
             disabled={state.kind === "starting"}
             elapsedLabel={formatElapsed(speech.elapsedMs)}
-            onPress={() => void (state.kind === "recording" ? speech.stopRecording() : speech.startRecording())}
+            onPress={() => {
+              if (state.kind === "recording") void speech.stopRecording();
+              else listen();
+            }}
           />
           {state.kind === "problem" && <Text style={text.problem}>{state.message}</Text>}
           {state.kind !== "recording" && (

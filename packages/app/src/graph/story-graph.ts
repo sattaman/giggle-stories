@@ -137,12 +137,20 @@ const designVoices: Node = async (state, config) => {
 
   const cast = await Promise.all(
     state.cast.map(async (character, index): Promise<Character> => {
-      const voice = await voiceFor(deps, writer, character, index);
+      const { preview, ...voice } = await voiceFor(deps, writer, character, index);
       let sampleUrl: string | null = null;
       try {
-        const intro = character.catchphrase ?? `Hello! I'm ${character.name}.`;
-        const speech = await deps.speech.synthesize({ text: intro, voiceId: voice.voiceId, style: "introducing myself, in character" });
-        sampleUrl = await deps.audio.save(state.storyId, `voice-${character.id}`, speech.wav);
+        // Prefer the free preview from voice design; otherwise say hello in character (1 TTS call).
+        const wav =
+          preview ??
+          (
+            await deps.speech.synthesize({
+              text: character.catchphrase ?? `Hello! I'm ${character.name}.`,
+              voiceId: voice.voiceId,
+              style: "introducing myself, in character",
+            })
+          ).wav;
+        sampleUrl = await deps.audio.save(state.storyId, `voice-${character.id}`, wav);
       } catch (error: unknown) {
         deps.log.warn({ storyId: state.storyId, character: character.id, error: String(error) }, "voice sample failed");
       }
@@ -158,7 +166,7 @@ async function voiceFor(
   writer: StoryWriter,
   character: CharacterProfile,
   index: number,
-): Promise<{ voiceId: string; source: "designed" | "catalog" }> {
+): Promise<{ voiceId: string; source: "designed" | "catalog"; preview: Uint8Array | undefined }> {
   try {
     let description = character.voiceDescription;
     let mayRewrite = true;
@@ -168,8 +176,8 @@ async function voiceFor(
     }
     for (;;) {
       try {
-        const { voiceId } = await deps.voices.design({ name: character.name, gender: character.gender, description });
-        return { voiceId, source: "designed" };
+        const { voiceId, preview } = await deps.voices.design({ name: character.name, gender: character.gender, description });
+        return { voiceId, source: "designed", preview };
       } catch (error: unknown) {
         if (!(error instanceof VoiceRejectedError) || !mayRewrite) throw error;
         deps.log.warn({ character: character.id, description }, "voice description rejected; rewriting");
@@ -179,7 +187,7 @@ async function voiceFor(
     }
   } catch (error: unknown) {
     deps.log.warn({ character: character.id, error: String(error) }, "voice design failed; using catalogue voice");
-    return { voiceId: deps.voices.fallback(character.gender, index), source: "catalog" };
+    return { voiceId: deps.voices.fallback(character.gender, index), source: "catalog", preview: undefined };
   }
 }
 
