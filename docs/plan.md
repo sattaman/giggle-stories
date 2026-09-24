@@ -213,6 +213,34 @@ Phase 0 deliberately skips the architecture, because it answers the riskiest que
 - A `SafetyGuard` port from day one: deterministic rules + an LLM check against a written 8–12 story policy. Model Armor later.
 - The POC runs locally with a parent present.
 
+## Status: 2026-09-24 (night before the first play session)
+
+**Built and working end to end** (live-tested with the real LLM, TTS and voice design):
+- Phases 0–5 are done in POC form. They cover:
+  - the voice spike;
+  - domain/app/adapters/server/client packages;
+  - the LangGraph flow with question and outline-review interrupts;
+  - drafting page 1 in parallel with voice design;
+  - per-line TTS with progressive playback;
+  - the Expo web UI;
+  - LangSmith threads per story.
+- **Measured timings:** idea → outline ~60s (characters appear at ~12s); "Yes!" → first line ~6s; a few pence per story.
+- **LLMs:** GPT-6 Luna Pro (creative) and Luna (fast) via OpenRouter. Sonnet 5 is ruled out on cost.
+  Plain Luna for the creative tasks is 3–4× faster with slightly plainer prose (`STORY_MODEL_CREATIVE`).
+
+**Learned the hard way** (details in docs/research, CLAUDE.md):
+- Voice Design blocks child-like descriptions, so we use cartoon framing.
+- Gemini free tier is 10 TTS requests a day; keys belong to projects.
+- LLM schemas must be flat with generous limits; don't use a field called `title`.
+- A LangGraph node can't share a name with a state key. A join edge fires once, hence the separate `redraftPage` node.
+
+**Next** (after watching her play; fill in observations):
+- Tune the prompts for her humour. Seed a LangSmith dataset from real sessions, and add 😂 feedback via presigned tokens.
+- Pages 2–6, a "next page" flow, and stopping repeated gags across pages.
+- Shorten the pre-outline wait: a faster outline model, and speculative voice samples.
+- Evals (Phase 4 proper): deterministic invariants + LLM judges + pairwise model comparison.
+- A LangSmith EU account before real child data (currently US).
+
 ## 11. Risks and open questions
 
 - **TTS latency** is unknown: one call per segment × ~15 segments per page. Synthesise segments in parallel and measure in Phase 0. Streaming later if needed.
