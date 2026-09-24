@@ -17,3 +17,5 @@ The project is TypeScript end to end: server, web, and later an Expo mobile app.
   Remove the shim when the SDK fixes its typings.
 - **`langsmith` 0.10.5 typing defect.** Under `exactOptionalPropertyTypes`, `RunTree` doesn't match the `BaseRun` interface it implements (`events?: KVMap[]` vs `KVMap[] | undefined`).
   Fixed with a one-line `pnpm patch` (`patches/langsmith@0.10.5.patch`) that only changes the `.d.ts` file. Drop the patch when upgrading if upstream has fixed it; `pnpm install` fails loudly if the patch no longer applies.
+- **`@langchain/core` 1.2.12 typing defect.** It has the same `exactOptionalPropertyTypes` mismatch (`AIMessageFields.usage_metadata`, `ZodV3TypeDef`/`ZodV3Like.description`).
+  Fixed with a `.d.ts`-only `pnpm patch`. If this keeps growing with more LangChain packages, reconsider scoping `exactOptionalPropertyTypes` off for the LangChain-facing packages instead.

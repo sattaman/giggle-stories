@@ -1,0 +1,160 @@
+// The story writer: each creative step as a typed call to the StructuredModel port,
+// with domain invariants checked and one corrective retry where they're violated.
+
+import {
+  Cast,
+  ClarificationDecision,
+  Outline,
+  PageScript,
+  StoryBrief,
+  missingCharacters,
+  scriptProblems,
+  slugify,
+  type CharacterProfile,
+} from "@storytime/domain";
+import { z } from "zod";
+import type { StructuredModel } from "../ports.ts";
+import {
+  CAST,
+  DECIDE,
+  EXTRACT_BRIEF,
+  OUTLINE,
+  REVISE_OUTLINE,
+  REWRITE_VOICE,
+  STORYTELLER,
+  WRITE_PAGE,
+  block,
+} from "./prompts.ts";
+
+export interface QuestionAndAnswer {
+  readonly question: string;
+  readonly answer: string;
+}
+
+const VoiceRewrite = z.object({ voiceDescription: z.string().min(20).max(300) });
+
+export class StoryWriter {
+  constructor(private readonly model: StructuredModel) {}
+
+  extractBrief(idea: string, answers: readonly QuestionAndAnswer[]): Promise<StoryBrief> {
+    return this.model.generate({
+      task: "extract_brief",
+      schema: StoryBrief,
+      system: `${STORYTELLER}\n\n${EXTRACT_BRIEF}`,
+      prompt: [block("child_idea", idea), block("answers", answers)].join("\n\n"),
+      creative: false,
+    });
+  }
+
+  decide(brief: StoryBrief, answers: readonly QuestionAndAnswer[]): Promise<ClarificationDecision> {
+    return this.model.generate({
+      task: "decide_clarification",
+      schema: ClarificationDecision,
+      system: `${STORYTELLER}\n\n${DECIDE}`,
+      prompt: [block("brief", brief), block("already_asked", answers)].join("\n\n"),
+      creative: false,
+    });
+  }
+
+  async cast(brief: StoryBrief): Promise<CharacterProfile[]> {
+    const request = (feedback: string | undefined) =>
+      this.model.generate({
+        task: "cast_characters",
+        schema: Cast,
+        system: `${STORYTELLER}\n\n${CAST}`,
+        prompt: [block("brief", brief), ...(feedback === undefined ? [] : [block("fix_this", feedback)])].join("\n\n"),
+        creative: true,
+      });
+
+    let { characters } = await request(undefined);
+    const missing = missingCharacters(brief.characters, characters);
+    if (missing.length > 0) {
+      ({ characters } = await request(`You left out or renamed: ${missing.join(", ")}. Include them with exact names.`));
+    }
+    // Ids must be unique and match names, whatever the model did.
+    const seen = new Set<string>();
+    return characters.map((character) => {
+      let id = slugify(character.name) || "character";
+      while (seen.has(id)) id = `${id}-2`;
+      seen.add(id);
+      return { ...character, id };
+    });
+  }
+
+  outline(brief: StoryBrief, cast: readonly CharacterProfile[]): Promise<Outline> {
+    return this.model.generate({
+      task: "outline",
+      schema: Outline,
+      system: `${STORYTELLER}\n\n${OUTLINE}`,
+      prompt: [block("brief", brief), block("cast", summariseCast(cast))].join("\n\n"),
+      creative: true,
+    });
+  }
+
+  reviseOutline(brief: StoryBrief, cast: readonly CharacterProfile[], outline: Outline, feedback: string): Promise<Outline> {
+    return this.model.generate({
+      task: "revise_outline",
+      schema: Outline,
+      system: `${STORYTELLER}\n\n${OUTLINE}\n\n${REVISE_OUTLINE}`,
+      prompt: [
+        block("brief", brief),
+        block("cast", summariseCast(cast)),
+        block("current_outline", outline),
+        block("child_feedback", feedback),
+      ].join("\n\n"),
+      creative: true,
+    });
+  }
+
+  async writePage(brief: StoryBrief, cast: readonly CharacterProfile[], outline: Outline, page: number): Promise<PageScript> {
+    const request = (problems: readonly string[]) =>
+      this.model.generate({
+        task: "write_page",
+        schema: PageScript,
+        system: `${STORYTELLER}\n\n${WRITE_PAGE}`,
+        prompt: [
+          block("brief", brief),
+          block("cast", summariseCast(cast)),
+          block("outline", outline),
+          block("write_page", String(page)),
+          ...(problems.length === 0 ? [] : [block("fix_these_problems", problems.join("\n"))]),
+        ].join("\n\n"),
+        creative: true,
+      });
+
+    const first = await request([]);
+    const problems = scriptProblems(first, cast);
+    if (problems.length === 0) return { ...first, page };
+    const second = await request(problems);
+    // Drop any lines that are still invalid rather than fail the child's story.
+    const known = new Set(["narrator", ...cast.map((c) => c.id)]);
+    return { page, segments: second.segments.filter((s) => known.has(s.speaker)) };
+  }
+
+  async rewriteVoiceDescription(character: CharacterProfile): Promise<string> {
+    const { voiceDescription } = await this.model.generate({
+      task: "rewrite_voice",
+      schema: VoiceRewrite,
+      system: REWRITE_VOICE,
+      prompt: block("character", {
+        name: character.name,
+        personality: character.personality,
+        comicTrait: character.comicTrait,
+        rejected: character.voiceDescription,
+      }),
+      creative: false,
+    });
+    return voiceDescription;
+  }
+}
+
+function summariseCast(cast: readonly CharacterProfile[]): unknown {
+  return cast.map(({ id, name, role, personality, comicTrait, catchphrase }) => ({
+    id,
+    name,
+    role,
+    personality,
+    comicTrait,
+    catchphrase,
+  }));
+}

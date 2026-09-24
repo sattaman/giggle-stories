@@ -1,0 +1,23 @@
+{
+  "name": "@storytime/app",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json",
+    "typecheck:compat": "tsc6 -p tsconfig.json"
+  },
+  "devDependencies": {
+    "vitest": "^5.0.1"
+  },
+  "dependencies": {
+    "@langchain/core": "1.2.12",
+    "@langchain/langgraph": "1.4.17",
+    "@storytime/domain": "workspace:*",
+    "langsmith": "^0.10.5",
+    "zod": "^4.6.5"
+  }
+}

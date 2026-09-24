@@ -10,4 +10,5 @@ allowBuilds:
   esbuild: true
 
 patchedDependencies:
+  '@langchain/core@1.2.12': patches/@langchain__core@1.2.12.patch
   langsmith@0.10.5: patches/langsmith@0.10.5.patch

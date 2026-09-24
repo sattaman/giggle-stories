@@ -1,0 +1,37 @@
+diff --git a/dist/messages/ai.d.ts b/dist/messages/ai.d.ts
+index 578bc7863969ea5c0680194344695be73d35cb26..215bb9f364da05d9bd8a8c2de7e217ef24dded49 100644
+--- a/dist/messages/ai.d.ts
++++ b/dist/messages/ai.d.ts
+@@ -6,7 +6,7 @@ import { $InferMessageContent, $InferMessageProperty, $InferToolCalls, MessageSt
+ interface AIMessageFields<TStructure extends MessageStructure = MessageStructure> extends BaseMessageFields<TStructure, "ai"> {
+   tool_calls?: $InferToolCalls<TStructure>[];
+   invalid_tool_calls?: InvalidToolCall[];
+-  usage_metadata?: $InferMessageProperty<TStructure, "ai", "usage_metadata">;
++  usage_metadata?: $InferMessageProperty<TStructure, "ai", "usage_metadata"> | undefined;
+ }
+ declare class AIMessage<TStructure extends MessageStructure = MessageStructure> extends BaseMessage<TStructure, "ai"> implements AIMessageFields<TStructure> {
+   readonly type: "ai";
+diff --git a/dist/utils/types/zod.d.ts b/dist/utils/types/zod.d.ts
+index 53c7a48556c081bd62b5296e66dba0fdf37c735e..bcb37b6aa0de89ec45a7f3ded614e7913b2a42cb 100644
+--- a/dist/utils/types/zod.d.ts
++++ b/dist/utils/types/zod.d.ts
+@@ -1,8 +1,8 @@
+ import { SerializableSchema } from "../standard_schema.js";
+ //#region src/utils/types/zod.d.ts
+ interface ZodV3TypeDef {
+-  typeName?: string;
+-  description?: string;
++  typeName?: string | undefined;
++  description?: string | undefined;
+   [key: string]: any;
+ }
+ interface ZodV3Like<Output = any, Input = Output> {
+@@ -10,7 +10,7 @@ interface ZodV3Like<Output = any, Input = Output> {
+   readonly _output: Output;
+   readonly _input: Input;
+   readonly _def: ZodV3TypeDef;
+-  readonly description?: string;
++  readonly description?: string | undefined;
+   parse(data: unknown, params?: any): Output;
+   safeParse(data: unknown, params?: any): {
+     success: boolean;

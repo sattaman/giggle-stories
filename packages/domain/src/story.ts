@@ -72,6 +72,8 @@ export type CharacterProfile = z.infer<typeof CharacterProfile>;
 export const VoiceAssignment = z.object({
   voiceId: z.string().min(1),
   source: z.enum(["designed", "catalog"]),
+  /** A short "hello, it's me" line in this voice, for the character card. */
+  sampleUrl: z.string().nullable(),
 });
 export type VoiceAssignment = z.infer<typeof VoiceAssignment>;
 
