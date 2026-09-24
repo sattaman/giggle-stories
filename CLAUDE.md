@@ -25,5 +25,7 @@ Plan: `docs/plan.md`. Verified API notes: `docs/research/`. Decisions: `docs/adr
 - **LLM-facing schemas** stay flat objects: no unions/oneOf (Anthropic structured output rejects them). Keep length limits generous.
 - **Voice Design blocks child-like voice descriptions** (age, kid, young, tiny, sweet, squeaky…). Describe the sound, or use cartoon framing. Fallback chain: rewrite the description, then a catalogue voice.
 - **Env:** `storytime/.env` must override shell env. `~/.zshenv` exports a different, free-tier `GEMINI_API_KEY`.
+- **TTS quotas (Tier 1):** 100 requests/day for `gemini-3.8-flash-tts`, plus a separate 100/day for `gemini-3.8-flash-lite-tts`. The adapter falls back automatically. A story uses about 16–20 requests, so roughly 10 stories a day in total.
+  Check the limits at ai.dev/rate-limit. The Gemini SDK's own retries are disabled (`maxRetries: 0`); our retry loop handles 429s.
 - **Privacy:** first names only; delete raw recordings after transcription; no voice cloning.
 - **LangSmith:** the account is in the US region (`LANGSMITH_ENDPOINT=https://api.smith.langchain.com`), project `storytime-dev`.
