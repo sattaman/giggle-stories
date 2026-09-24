@@ -5,7 +5,7 @@ import { defineConfig, globalIgnores } from 'eslint/config';
 import tseslint from 'typescript-eslint';
 
 export default defineConfig(
-  globalIgnores(['**/dist/**', '**/node_modules/**', 'docs/research/**', 'runs/**', '**/out/**', 'data/**', 'packages/client/**' /* TEMP: client agent enables typed lint */]),
+  globalIgnores(['**/dist/**', '**/node_modules/**', 'docs/research/**', 'runs/**', '**/out/**', 'data/**', 'packages/client/.expo/**', 'packages/client/expo-env.d.ts' /* Expo-generated */]),
   {
     files: ['**/*.{ts,tsx,mts,cts}'],
     extends: [js.configs.recommended, tseslint.configs.strictTypeChecked, tseslint.configs.stylisticTypeChecked],
@@ -32,6 +32,16 @@ export default defineConfig(
       '@typescript-eslint/ban-ts-comment': [
         'error',
         { 'ts-check': false, 'ts-ignore': true, 'ts-nocheck': true, 'ts-expect-error': 'allow-with-description', minimumDescriptionLength: 10 },
+      ],
+    },
+  },
+  {
+    // node:test's describe/it return promises the runner itself awaits.
+    files: ['packages/client/test/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-floating-promises': [
+        'error',
+        { allowForKnownSafeCalls: [{ from: 'package', name: ['describe', 'it'], package: 'node:test' }] },
       ],
     },
   },

@@ -1,20 +1,28 @@
 {
+  // Expo's base (bundler resolution, react-jsx, DOM + ESNext libs) plus the repo's strict+ flags.
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
-    "paths": {
-      "@/*": [
-        "./src/*"
-      ],
-      "@/assets/*": [
-        "./assets/*"
-      ]
-    }
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true,
+    "useUnknownInCatchVariables": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "forceConsistentCasingInFileNames": true,
+    "allowImportingTsExtensions": true,
+    "allowJs": false,
+    // Client-only exception to the repo's skipLibCheck: false. The RN/Expo .d.ts
+    // graph doesn't check cleanly: react-native's globals.d.ts clashes with lib.dom
+    // (and @types/node), expo-router's bundled react-navigation types break under
+    // exactOptionalPropertyTypes, and reanimated/react-native-screens reference
+    // modules that aren't installed (react-native-svg, ./TabsHost). Our own code is
+    // still fully checked.
+    "skipLibCheck": true
   },
-  "include": [
-    "**/*.ts",
-    "**/*.tsx",
-    ".expo/types/**/*.ts",
-    "expo-env.d.ts"
-  ]
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
 }

@@ -1,12 +1,12 @@
 {
   "expo": {
-    "name": "client",
-    "slug": "client",
+    "name": "Storytime",
+    "slug": "storytime",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "client",
-    "userInterfaceStyle": "automatic",
+    "scheme": "storytime",
+    "userInterfaceStyle": "light",
     "ios": {
       "icon": "./assets/expo.icon"
     },
@@ -20,7 +20,7 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "output": "static",
+      "output": "single",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
@@ -36,7 +36,6 @@
       "expo-audio"
     ],
     "experiments": {
-      "typedRoutes": true,
       "reactCompiler": true
     }
   }

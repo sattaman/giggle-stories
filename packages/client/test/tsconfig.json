@@ -1,0 +1,11 @@
+{
+  // Pure-logic tests, run by Node's built-in test runner with type stripping.
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "types": ["node"],
+    "erasableSyntaxOnly": true
+  },
+  "include": ["."]
+}

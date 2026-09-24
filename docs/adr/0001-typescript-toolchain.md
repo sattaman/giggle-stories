@@ -19,3 +19,10 @@ The project is TypeScript end to end: server, web, and later an Expo mobile app.
   Fixed with a one-line `pnpm patch` (`patches/langsmith@0.10.5.patch`) that only changes the `.d.ts` file. Drop the patch when upgrading if upstream has fixed it; `pnpm install` fails loudly if the patch no longer applies.
 - **`@langchain/core` 1.2.12 typing defect.** It has the same `exactOptionalPropertyTypes` mismatch (`AIMessageFields.usage_metadata`, `ZodV3TypeDef`/`ZodV3Like.description`).
   Fixed with a `.d.ts`-only `pnpm patch`. If this keeps growing with more LangChain packages, reconsider scoping `exactOptionalPropertyTypes` off for the LangChain-facing packages instead.
+- **`packages/client` uses `skipLibCheck: true`** (the only package that does). Expo and React Native typings don't check:
+  - react-native's `globals.d.ts` conflicts with lib.dom and @types/node;
+  - expo-router's bundled react-navigation types fail under `exactOptionalPropertyTypes`;
+  - reanimated and screens reference uninstalled modules.
+
+  Our own client code is fully strict. The client test tsconfig keeps `skipLibCheck: false`. `noPropertyAccessFromIndexSignature` is off there because Expo only inlines `process.env.EXPO_PUBLIC_*` written with dot access.
+- **Client tests** use Node's built-in `node:test` runner, which needs no extra dependency.
