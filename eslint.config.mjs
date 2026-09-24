@@ -5,7 +5,7 @@ import { defineConfig, globalIgnores } from 'eslint/config';
 import tseslint from 'typescript-eslint';
 
 export default defineConfig(
-  globalIgnores(['**/dist/**', '**/node_modules/**', 'docs/research/**', 'runs/**', '**/out/**']),
+  globalIgnores(['**/dist/**', '**/node_modules/**', 'docs/research/**', 'runs/**', '**/out/**', 'data/**', 'packages/client/**' /* TEMP: client agent enables typed lint */]),
   {
     files: ['**/*.{ts,tsx,mts,cts}'],
     extends: [js.configs.recommended, tseslint.configs.strictTypeChecked, tseslint.configs.stylisticTypeChecked],

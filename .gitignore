@@ -16,3 +16,4 @@ spikes/*/out/
 *service-account*.json
 gen-lang-client-*.json
 *-credentials.json
+data/
