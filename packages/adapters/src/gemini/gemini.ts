@@ -76,8 +76,18 @@ export function retryDelayMs(message: string): number | undefined {
   return Math.round((part("h") * 3600 + part("m") * 60 + part("s")) * 1000);
 }
 
+export type Sleep = (ms: number) => Promise<void>;
+const realSleep: Sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** Test seams; production uses the defaults. */
+export interface GeminiOptions {
+  /** TTS models tried in order before the legacy built-in-voice models. */
+  readonly models?: readonly string[];
+  readonly sleep?: Sleep;
+}
+
 /** Retries 429/5xx, honouring the server's "retry in Ns" hint. Daily quotas aren't retried. */
-async function withRetry<T>(what: string, log: Logger, fn: () => Promise<T>): Promise<T> {
+async function withRetry<T>(what: string, log: Logger, fn: () => Promise<T>, sleep: Sleep = realSleep): Promise<T> {
   for (let attempt = 1; ; attempt++) {
     try {
       return await fn();
@@ -88,7 +98,7 @@ async function withRetry<T>(what: string, log: Logger, fn: () => Promise<T>): Pr
       const hinted = retryDelayMs(api.message);
       const waitMs = Math.min(20_000, hinted === undefined ? 1000 * 2 ** attempt : hinted + 250);
       log.warn({ what, attempt, status: api.status, waitMs }, "gemini retry");
-      await new Promise((resolve) => setTimeout(resolve, waitMs));
+      await sleep(waitMs);
     }
   }
 }
@@ -97,11 +107,17 @@ export class GeminiSpeech implements SpeechSynthesizer {
   /** model → time its daily quota resets (ms since epoch). */
   private readonly exhaustedUntil = new Map<string, number>();
 
+  private readonly models: readonly string[];
+  private readonly sleep: Sleep;
+
   constructor(
     private readonly ai: GoogleGenAI,
     private readonly log: Logger,
-    private readonly models: readonly string[] = [TTS_MODEL, TTS_FALLBACK_MODEL],
-  ) {}
+    options: GeminiOptions = {},
+  ) {
+    this.models = options.models ?? [TTS_MODEL, TTS_FALLBACK_MODEL];
+    this.sleep = options.sleep ?? realSleep;
+  }
 
   async synthesize(request: {
     readonly text: string;
@@ -127,6 +143,7 @@ export class GeminiSpeech implements SpeechSynthesizer {
             },
             NO_SDK_RETRIES,
           ),
+          this.sleep,
         );
         const pcm = toPcm(Buffer.from(AudioResult.parse(interaction).output_audio.data, "base64"));
         return { wav: toWav(pcm), durationMs: durationMs(pcm) };
@@ -154,6 +171,7 @@ export class GeminiSpeech implements SpeechSynthesizer {
               httpOptions: { retryOptions: { attempts: 1 } },
             },
           }),
+          this.sleep,
         );
         const data = LegacyAudio.parse(response).candidates[0]?.content?.parts?.find((p) => p.inlineData !== undefined)
           ?.inlineData?.data;
@@ -178,10 +196,15 @@ export class GeminiSpeech implements SpeechSynthesizer {
 }
 
 export class GeminiVoiceDesigner implements VoiceDesigner {
+  private readonly sleep: Sleep;
+
   constructor(
     private readonly ai: GoogleGenAI,
     private readonly log: Logger,
-  ) {}
+    options: Pick<GeminiOptions, "sleep"> = {},
+  ) {
+    this.sleep = options.sleep ?? realSleep;
+  }
 
   async design(request: {
     readonly name: string;
@@ -204,6 +227,7 @@ export class GeminiVoiceDesigner implements VoiceDesigner {
         },
           NO_SDK_RETRIES,
         ),
+        this.sleep,
       );
       const voice = CreatedVoice.parse(created);
       return {

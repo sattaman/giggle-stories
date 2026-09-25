@@ -52,19 +52,31 @@ export class OpenRouterStructuredModel implements StructuredModel {
           new HumanMessage(correction === undefined ? request.prompt : `${request.prompt}\n\n${correction}`),
         ]);
 
-    let raw: unknown;
-    try {
-      raw = await call(undefined);
-    } catch (error: unknown) {
-      // One corrective retry when the output didn't match the schema.
-      const message = error instanceof Error ? error.message : String(error);
-      if (!/parse|schema|expected/i.test(message)) throw error;
-      this.log.warn({ task: request.task, model, error: message.slice(0, 300) }, "llm output invalid; retrying");
-      raw = await call(`Your previous answer was invalid:\n${message.slice(0, 800)}\nReturn a corrected answer.`);
-    }
-    // Re-validate at the boundary: provider structured output is not a guarantee.
-    const result = request.schema.parse(raw);
+    const result = await generateWithCorrection(call, request.schema, this.log, { task: request.task, model });
     this.log.info({ task: request.task, model, ms: Math.round(performance.now() - started) }, "llm call");
     return result;
   }
+}
+
+/**
+ * One corrective retry when the output didn't match the schema; any other error propagates.
+ * Transport retries (429/5xx) happen below this, inside the SDK (maxRetries: 3).
+ */
+export async function generateWithCorrection<S extends z.ZodType>(
+  call: (correction: string | undefined) => Promise<unknown>,
+  schema: S,
+  log: Logger,
+  fields: { readonly task: string; readonly model: string },
+): Promise<z.infer<S>> {
+  let raw: unknown;
+  try {
+    raw = await call(undefined);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!/parse|schema|expected/i.test(message)) throw error;
+    log.warn({ ...fields, error: message.slice(0, 300) }, "llm output invalid; retrying");
+    raw = await call(`Your previous answer was invalid:\n${message.slice(0, 800)}\nReturn a corrected answer.`);
+  }
+  // Re-validate at the boundary: provider structured output is not a guarantee.
+  return schema.parse(raw);
 }

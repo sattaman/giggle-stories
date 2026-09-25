@@ -101,7 +101,7 @@ That's **about a week of evenings** for a shareable web beta.
 
 ## 7. How this fits the LangChain learning plan
 
-Replacing the in-memory progress map with LangGraph streaming (`streamMode: ["updates","custom"]`, step 7 of `docs/learning/langchain-plan.md`) is what makes the deployment robust. So:
+Replacing the in-memory progress map with LangGraph streaming (`streamMode: ["updates","custom"]`) is what makes the deployment robust. So:
 
 1. Send the Astra prompts A1 (LangGraph idioms) and A3 (privacy) for an outside review now.
 2. Do learning steps 1–4 (Studio, checkpoints and time travel, LangSmith debugging, node and adapter tests) locally.
