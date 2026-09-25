@@ -2,7 +2,8 @@
 
 New here? Read the [mini guide](guide.md) first.
 
-Status: tasks 1–3 done ([setup, diagram and Studio](studio.md), [checkpoints](checkpoints.md)); the rest planned. Companion to [the migration review](langgraph-migration.md)
+Status: tasks 1–4 done ([setup, diagram and Studio](studio.md), [checkpoints](checkpoints.md),
+[failure contracts](failure-contracts.md)); the rest planned. Companion to [the migration review](langgraph-migration.md)
 and [the original learning plan](langchain-plan.md).
 
 ## Working agreement
@@ -54,10 +55,10 @@ forking; the exercise explains why individual-node tests cannot prove checkpoint
 
 ### 4. Add focused node and adapter contract tests
 
-- [ ] Test recast voice preservation, changed-character voice replacement and library uniqueness.
-- [ ] Test structured-output parsing, corrective retry and permanent provider failure.
-- [ ] Test TTS transient errors, daily quota exhaustion, fallback order and empty responses.
-- [ ] Make dependencies injectable where necessary to test these behaviours without live calls.
+- [x] Test recast voice preservation, changed-character voice replacement and library uniqueness.
+- [x] Test structured-output parsing, corrective retry and permanent provider failure.
+- [x] Test TTS transient errors, daily quota exhaustion, fallback order and empty responses.
+- [x] Make dependencies injectable where necessary to test these behaviours without live calls.
 
 **Done when:** tests assert outputs and provider attempt counts, including intentional text-only
 fallbacks. Bugs found are fixed in separate, focused changes with regression coverage.
