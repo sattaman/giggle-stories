@@ -1,6 +1,6 @@
 # LangGraph migration task list
 
-Status: planned, not implemented. Companion to [the migration review](langgraph-migration.md)
+Status: tasks 1–2 done ([setup, diagram and Studio](studio.md)); the rest planned. Companion to [the migration review](langgraph-migration.md)
 and [the original learning plan](langchain-plan.md).
 
 ## Working agreement
@@ -18,19 +18,19 @@ and [the original learning plan](langchain-plan.md).
 
 ### 1. Establish a reproducible learning environment
 
-- [ ] Complete dependency setup in the existing `codex/langgraph-learning` worktree.
-- [ ] Run `pnpm check` in that worktree and record the baseline.
-- [ ] Configure separate checkpoint/audio directories and fake dependencies; disable tracing
+- [x] Complete dependency setup in the existing `codex/langgraph-learning` worktree.
+- [x] Run `pnpm check` in that worktree and record the baseline.
+- [x] Configure separate checkpoint/audio directories and fake dependencies; disable tracing
   by default for exercises. Do not copy real story data or credentials into fixtures.
 
 **Done when:** the documented setup can run synthetic stories without provider credentials.
 
 ### 2. Add graph visualisation and Studio wiring
 
-- [ ] Export Mermaid from `buildStoryGraph()` and document how to regenerate it.
-- [ ] Add `langgraph.json` and a development entry point with fake dependencies.
-- [ ] Document how dependency context and checkpoint ownership work in the Studio runtime.
-- [ ] Walk through clarification, outline approval, revision and completion.
+- [x] Export Mermaid from `buildStoryGraph()` and document how to regenerate it.
+- [x] Add `langgraph.json` and a development entry point with fake dependencies.
+- [x] Document how dependency context and checkpoint ownership work in the Studio runtime.
+- [x] Walk through clarification, outline approval, revision and completion.
 
 **Done when:** the diagram reflects the actual graph and the fake Studio workflow reaches
 both interrupt types and completion.
