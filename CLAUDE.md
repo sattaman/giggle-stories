@@ -1,6 +1,6 @@
 # Storytime
 
-A voice-performed, funny story generator for an 8–12-year-old. The child speaks an idea, answers 0–2 spoken questions, approves an outline, then hears page 1 performed by a narrator and designed character voices. The POC succeeds if she laughs and asks for another.
+A voice-performed, funny story generator for children aged 0–12 (age range picked per story: 0–4 / 5–8 / 9–12). The child speaks an idea, answers 0–2 spoken questions, approves an outline, then hears page 1 performed by a narrator and designed character voices. The POC succeeds if she laughs and asks for another.
 
 Plan: `docs/plan.md`. Verified API notes: `docs/research/`. Decisions: `docs/adr/`.
 
