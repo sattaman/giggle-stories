@@ -14,6 +14,8 @@ export interface StoryApi {
   start(idea: string, ageBand: AgeBand): Promise<StoryView>;
   get(id: string): Promise<StoryView>;
   reply(id: string, body: ReplyBody): Promise<StoryView>;
+  /** Carries on a story that stopped part-way (`view.canRetry`). */
+  retry(id: string): Promise<StoryView>;
   /** The narrator's fixed guide lines. Callers treat a failure as "no narration". */
   narration(): Promise<NarrationClips>;
   /** Every story made so far, most recent first. */

@@ -15,6 +15,7 @@ const base: StoryView = {
   title: null,
   performance: null,
   error: null,
+  canRetry: false,
 };
 
 describe("screenFor", () => {
@@ -39,7 +40,8 @@ describe("screenFor", () => {
   });
 
   it("shows a friendly error", () => {
-    assert.equal(screenFor({ ...base, status: "error", error: "boom" }).kind, "error");
+    assert.deepEqual(screenFor({ ...base, status: "error", error: "boom" }), { kind: "error", message: "boom", canRetry: false });
+    assert.deepEqual(screenFor({ ...base, status: "error", error: "boom", canRetry: true }), { kind: "error", message: "boom", canRetry: true });
   });
 });
 

@@ -63,6 +63,9 @@ export function createHttpStoryApi(baseUrl: string): StoryApi {
     reply(id: string, body: ReplyBody): Promise<StoryView> {
       return postJson(`/v1/stories/${encodeURIComponent(id)}/replies`, ReplyBody.parse(body), StoryView);
     },
+    retry(id: string): Promise<StoryView> {
+      return postJson(`/v1/stories/${encodeURIComponent(id)}/retry`, {}, StoryView);
+    },
     async listStories(): Promise<StorySummary[]> {
       const list = await request("/v1/stories", { method: "GET" }, StoryList, JSON_TIMEOUT_MS);
       return list.stories;

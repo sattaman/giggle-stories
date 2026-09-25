@@ -19,6 +19,8 @@ export interface StorySession {
   readonly reconnecting: boolean;
   /** Sends a reply. Resolves false (and keeps the current screen) if it didn't get through. */
   readonly reply: (body: ReplyBody) => Promise<boolean>;
+  /** Carries on a story that stopped part-way. Resolves false if it didn't get through. */
+  readonly retry: () => Promise<boolean>;
 }
 
 export function useStory(api: StoryApi, id: string): StorySession {
@@ -84,5 +86,14 @@ export function useStory(api: StoryApi, id: string): StorySession {
     [api, id, accept],
   );
 
-  return { load, reconnecting: failures >= RECONNECTING_AFTER_FAILURES, reply };
+  const retry = useCallback(async (): Promise<boolean> => {
+    try {
+      accept(await api.retry(id));
+      return true;
+    } catch {
+      return false;
+    }
+  }, [api, id, accept]);
+
+  return { load, reconnecting: failures >= RECONNECTING_AFTER_FAILURES, reply, retry };
 }

@@ -115,10 +115,18 @@ function StoryStep({ session, onStartOver }: { readonly session: StorySession; r
         />
       );
     case "error":
-      return (
+      // A story that stopped part-way carries on from where it got to; otherwise start afresh.
+      return screen.canRetry ? (
         <OopsCard
           title="Oh no, the story machine got in a muddle!"
-          message="It's not your fault. Shall we try again?"
+          message="It's not your fault. Shall we carry on?"
+          onRetry={() => void session.retry()}
+        />
+      ) : (
+        <OopsCard
+          title="Oh no, the story machine got in a muddle!"
+          message="It's not your fault. Let's make a new one!"
+          actionLabel="New story"
           onRetry={onStartOver}
         />
       );
