@@ -1,5 +1,7 @@
 # LangGraph migration task list
 
+New here? Read the [mini guide](guide.md) first.
+
 Status: tasks 1–3 done ([setup, diagram and Studio](studio.md), [checkpoints](checkpoints.md)); the rest planned. Companion to [the migration review](langgraph-migration.md)
 and [the original learning plan](langchain-plan.md).
 
