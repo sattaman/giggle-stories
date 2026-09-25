@@ -71,9 +71,9 @@
     // Prevents ambient type pollution across unrelated parts of a monorepo.
     "types": [],
 
-    // Type declaration errors are real errors.
-    // skipLibCheck trades accuracy for speed — not an acceptable default.
-    "skipLibCheck": false,
+    // Our code is checked in full; third-party .d.ts files are not. Their defects
+    // (e.g. under exactOptionalPropertyTypes) aren't ours to fix. See ADR 0001.
+    "skipLibCheck": true,
 
     "target": "ES2023",
 

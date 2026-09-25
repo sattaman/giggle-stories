@@ -18,8 +18,8 @@ Plan: `docs/plan.md`. Verified API notes: `docs/research/`. Decisions: `docs/adr
 - `packages/adapters/scripts/live-check.ts`: live LLM smoke test (costs pennies). Run it with `node_modules/.bin/tsx`.
 
 ## Rules
-- **Strictness:** follow the typescript-setup skill. No `as`, no `!`, no `any`, `skipLibCheck: false`. Validate every boundary with zod (LLM output, SDK results, HTTP, env).
-  - Upstream `.d.ts` defects are fixed with `pnpm patch` (`patches/`) or small shims. Record each in ADR 0001.
+- **Strictness:** follow the typescript-setup skill. No `as`, no `!`, no `any`. Validate every boundary with zod (LLM output, SDK results, HTTP, env).
+  - Exception to the skill: `skipLibCheck: true`, so our code is fully checked but third-party `.d.ts` files aren't. No `pnpm patch` or global shims for upstream typing defects (ADR 0001).
 - **Imports:** relative imports use `.ts` extensions (`allowImportingTsExtensions`).
 - **LangGraph:** nodes with side effects (LLM, TTS) must never be interrupt nodes, because a resumed node re-runs from the top. A node can't share a name with a state field.
 - **LLM-facing schemas** stay flat objects: no unions/oneOf (Anthropic structured output rejects them). Keep length limits generous.

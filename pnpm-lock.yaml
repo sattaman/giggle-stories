@@ -4,10 +4,6 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-patchedDependencies:
-  '@langchain/core@1.2.12': fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f
-  langsmith@0.10.5: bf58cd0fb7491cacb9982eeb3652117eed946755142b443cd6b2246f8cc9ffd6
-
 importers:
 
   .:
@@ -41,10 +37,10 @@ importers:
         version: 2.24.0
       '@langchain/core':
         specifier: 1.2.12
-        version: 1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)
+        version: 1.2.12(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)
       '@langchain/openrouter':
         specifier: 0.4.13
-        version: 0.4.13(@langchain/core@1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))(ws@8.21.3)(zod@4.6.5)
+        version: 0.4.13(@langchain/core@1.2.12(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))(ws@8.21.3)(zod@4.6.5)
       '@storytime/app':
         specifier: workspace:*
         version: link:../app
@@ -53,7 +49,7 @@ importers:
         version: link:../domain
       langsmith:
         specifier: ^0.10.5
-        version: 0.10.5(patch_hash=bf58cd0fb7491cacb9982eeb3652117eed946755142b443cd6b2246f8cc9ffd6)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)
+        version: 0.10.5(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)
       zod:
         specifier: ^4.6.5
         version: 4.6.5
@@ -66,23 +62,23 @@ importers:
     dependencies:
       '@langchain/core':
         specifier: 1.2.12
-        version: 1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)
+        version: 1.2.12(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)
       '@langchain/langgraph':
         specifier: 1.4.17
-        version: 1.4.17(@langchain/core@1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(zod@4.6.5)
+        version: 1.4.17(@langchain/core@1.2.12(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(zod@4.6.5)
       '@storytime/domain':
         specifier: workspace:*
         version: link:../domain
       langsmith:
         specifier: ^0.10.5
-        version: 0.10.5(patch_hash=bf58cd0fb7491cacb9982eeb3652117eed946755142b443cd6b2246f8cc9ffd6)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)
+        version: 0.10.5(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)
       zod:
         specifier: ^4.6.5
         version: 4.6.5
     devDependencies:
       '@langchain/langgraph-checkpoint-sqlite':
         specifier: 1.0.4
-        version: 1.0.4(@langchain/core@1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))(@langchain/langgraph-checkpoint@1.1.5(@langchain/core@1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)))
+        version: 1.0.4(@langchain/core@1.2.12(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))(@langchain/langgraph-checkpoint@1.1.5(@langchain/core@1.2.12(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)))
       '@types/better-sqlite3':
         specifier: ^9.6.0
         version: 9.6.0
@@ -201,10 +197,10 @@ importers:
         version: 10.1.2
       '@langchain/langgraph':
         specifier: 1.4.17
-        version: 1.4.17(@langchain/core@1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(zod@4.6.5)
+        version: 1.4.17(@langchain/core@1.2.12(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(zod@4.6.5)
       '@langchain/langgraph-checkpoint-sqlite':
         specifier: 1.0.4
-        version: 1.0.4(@langchain/core@1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))(@langchain/langgraph-checkpoint@1.1.5(@langchain/core@1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)))
+        version: 1.0.4(@langchain/core@1.2.12(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))(@langchain/langgraph-checkpoint@1.1.5(@langchain/core@1.2.12(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)))
       '@storytime/adapters':
         specifier: workspace:*
         version: link:../adapters
@@ -219,7 +215,7 @@ importers:
         version: 5.12.5
       langsmith:
         specifier: ^0.10.5
-        version: 0.10.5(patch_hash=bf58cd0fb7491cacb9982eeb3652117eed946755142b443cd6b2246f8cc9ffd6)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)
+        version: 0.10.5(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)
       pino:
         specifier: ^10.3.1
         version: 10.3.1
@@ -244,7 +240,7 @@ importers:
         version: 2.24.0
       langsmith:
         specifier: ^0.10.5
-        version: 0.10.5(patch_hash=bf58cd0fb7491cacb9982eeb3652117eed946755142b443cd6b2246f8cc9ffd6)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)
+        version: 0.10.5(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)
       zod:
         specifier: ^4.6.5
         version: 4.6.5
@@ -5571,12 +5567,12 @@ snapshots:
 
   '@keyv/serialize@1.1.1': {}
 
-  '@langchain/core@1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)':
+  '@langchain/core@1.2.12(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)':
     dependencies:
       '@cfworker/json-schema': 4.1.1
       '@standard-schema/spec': 1.1.0
       js-tiktoken: 1.0.21
-      langsmith: 0.10.5(patch_hash=bf58cd0fb7491cacb9982eeb3652117eed946755142b443cd6b2246f8cc9ffd6)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)
+      langsmith: 0.10.5(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)
       mustache: 4.2.0
       p-queue: 6.6.2
       zod: 4.6.5
@@ -5587,19 +5583,19 @@ snapshots:
       - openai
       - ws
 
-  '@langchain/langgraph-checkpoint-sqlite@1.0.4(@langchain/core@1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))(@langchain/langgraph-checkpoint@1.1.5(@langchain/core@1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)))':
+  '@langchain/langgraph-checkpoint-sqlite@1.0.4(@langchain/core@1.2.12(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))(@langchain/langgraph-checkpoint@1.1.5(@langchain/core@1.2.12(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)))':
     dependencies:
-      '@langchain/core': 1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)
-      '@langchain/langgraph-checkpoint': 1.1.5(@langchain/core@1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))
+      '@langchain/core': 1.2.12(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)
+      '@langchain/langgraph-checkpoint': 1.1.5(@langchain/core@1.2.12(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))
       better-sqlite3: 12.11.1
 
-  '@langchain/langgraph-checkpoint@1.1.5(@langchain/core@1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))':
+  '@langchain/langgraph-checkpoint@1.1.5(@langchain/core@1.2.12(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))':
     dependencies:
-      '@langchain/core': 1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)
+      '@langchain/core': 1.2.12(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)
 
-  '@langchain/langgraph-sdk@1.11.2(@langchain/core@1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)':
+  '@langchain/langgraph-sdk@1.11.2(@langchain/core@1.2.12(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)':
     dependencies:
-      '@langchain/core': 1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)
+      '@langchain/core': 1.2.12(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)
       '@langchain/protocol': 0.0.19
       '@types/json-schema': 7.0.15
       p-queue: 9.3.3
@@ -5608,11 +5604,11 @@ snapshots:
       react: 19.2.3
       react-dom: 19.2.3(react@19.2.3)
 
-  '@langchain/langgraph@1.4.17(@langchain/core@1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(zod@4.6.5)':
+  '@langchain/langgraph@1.4.17(@langchain/core@1.2.12(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(zod@4.6.5)':
     dependencies:
-      '@langchain/core': 1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)
-      '@langchain/langgraph-checkpoint': 1.1.5(@langchain/core@1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))
-      '@langchain/langgraph-sdk': 1.11.2(@langchain/core@1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      '@langchain/core': 1.2.12(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)
+      '@langchain/langgraph-checkpoint': 1.1.5(@langchain/core@1.2.12(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))
+      '@langchain/langgraph-sdk': 1.11.2(@langchain/core@1.2.12(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@langchain/protocol': 0.0.19
       '@standard-schema/spec': 1.1.0
       zod: 4.6.5
@@ -5620,9 +5616,9 @@ snapshots:
       - react
       - react-dom
 
-  '@langchain/openai@1.5.13(@langchain/core@1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))(ws@8.21.3)':
+  '@langchain/openai@1.5.13(@langchain/core@1.2.12(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))(ws@8.21.3)':
     dependencies:
-      '@langchain/core': 1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)
+      '@langchain/core': 1.2.12(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)
       js-tiktoken: 1.0.21
       openai: 7.23.0(ws@8.21.3)(zod@4.6.5)
       zod: 4.6.5
@@ -5633,10 +5629,10 @@ snapshots:
       - undici
       - ws
 
-  '@langchain/openrouter@0.4.13(@langchain/core@1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))(ws@8.21.3)(zod@4.6.5)':
+  '@langchain/openrouter@0.4.13(@langchain/core@1.2.12(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))(ws@8.21.3)(zod@4.6.5)':
     dependencies:
-      '@langchain/core': 1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)
-      '@langchain/openai': 1.5.13(@langchain/core@1.2.12(patch_hash=fa3c8d748d1209e7a208b37ed965a6f2ff8c45b447ec600e17be104ba2712e0f)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))(ws@8.21.3)
+      '@langchain/core': 1.2.12(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)
+      '@langchain/openai': 1.5.13(@langchain/core@1.2.12(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))(ws@8.21.3)
       eventsource-parser: 4.1.1
       openai: 7.23.0(ws@8.21.3)(zod@4.6.5)
     transitivePeerDependencies:
@@ -7484,7 +7480,7 @@ snapshots:
 
   lan-network@0.2.1: {}
 
-  langsmith@0.10.5(patch_hash=bf58cd0fb7491cacb9982eeb3652117eed946755142b443cd6b2246f8cc9ffd6)(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3):
+  langsmith@0.10.5(openai@7.23.0(ws@8.21.3)(zod@4.6.5))(ws@8.21.3):
     dependencies:
       p-queue: 6.6.2
     optionalDependencies:
