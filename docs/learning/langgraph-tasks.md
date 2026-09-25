@@ -1,6 +1,6 @@
 # LangGraph migration task list
 
-Status: tasks 1–2 done ([setup, diagram and Studio](studio.md)); the rest planned. Companion to [the migration review](langgraph-migration.md)
+Status: tasks 1–3 done ([setup, diagram and Studio](studio.md), [checkpoints](checkpoints.md)); the rest planned. Companion to [the migration review](langgraph-migration.md)
 and [the original learning plan](langchain-plan.md).
 
 ## Working agreement
@@ -39,11 +39,11 @@ both interrupt types and completion.
 
 ### 3. Add checkpoint and time-travel exercises
 
-- [ ] Add checkpoint-history inspection with synthetic data.
-- [ ] Test closing/reopening SQLite at an interrupt, then resuming with fresh graph dependencies.
-- [ ] Fork an outline-review checkpoint, revise the fork, and verify the original is unchanged.
-- [ ] Test that approval does not repeat completed casting, drafting or voice preparation.
-- [ ] Demonstrate interrupted-node re-execution using a harmless counter in a test fixture.
+- [x] Add checkpoint-history inspection with synthetic data.
+- [x] Test closing/reopening SQLite at an interrupt, then resuming with fresh graph dependencies.
+- [x] Fork an outline-review checkpoint, revise the fork, and verify the original is unchanged.
+- [x] Test that approval does not repeat completed casting, drafting or voice preparation.
+- [x] Demonstrate interrupted-node re-execution using a harmless counter in a test fixture.
 
 **Done when:** tests distinguish interrupt resume, failure recovery and deliberate checkpoint
 forking; the exercise explains why individual-node tests cannot prove checkpoint behaviour.
@@ -75,7 +75,9 @@ how old stories remain usable, and how permanent failures are surfaced.
 
 ### 6. Test runner concurrency and failure states
 
-- [ ] Add tests for overlapping replies and stale/repeated approval submissions.
+- [ ] Add tests for overlapping replies and stale/repeated approval submissions, including a repeated
+  approval after the story has finished (resuming an answered checkpoint replays; see
+  [checkpoints](checkpoints.md)).
 - [ ] Exercise failures before the first checkpoint and during a later node.
 - [ ] Specify expected views for waiting, working, partially performed, failed and completed runs.
 - [ ] Cover the story index/checkpoint gap when starting a run fails.
