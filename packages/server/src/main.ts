@@ -15,12 +15,14 @@ import {
   tracedVoices,
 } from "@storytime/adapters";
 import { SqliteSaver } from "@langchain/langgraph-checkpoint-sqlite";
+import Database from "better-sqlite3";
 import { mkdir } from "node:fs/promises";
 import { pino } from "pino";
 import { loadDotEnv, readConfig } from "./config.ts";
 import { buildHttp } from "./http.ts";
 import type { VoiceArchetype } from "@storytime/domain";
 import { Narration, ensureStockVoices, ensureVoiceLibrary } from "./narration.ts";
+import { SqliteRunStore } from "./run-store.ts";
 import { StoryIndex } from "./story-index.ts";
 import { ensureNarratorVoice } from "./narrator.ts";
 import { GraphStoryService } from "./story-service.ts";
@@ -50,12 +52,15 @@ const stockVoices = await ensureStockVoices(voices, config.DATA_DIR, log);
 const narration = new Narration(speech, audio, narratorVoiceId, log);
 // Filled in the background as library voices become ready (designed once, cached).
 const voiceLibrary: Partial<Record<VoiceArchetype, string>> = {};
-const graph = compileStoryGraph(SqliteSaver.fromConnString(join(config.DATA_DIR, "checkpoints.sqlite")));
+// One SQLite file holds the checkpoints (story content) and run status (ADR 0002).
+const db = new Database(join(config.DATA_DIR, "checkpoints.sqlite"));
+const graph = compileStoryGraph(new SqliteSaver(db));
 const stories = new GraphStoryService(
   graph,
   { model, voices, speech, audio, log, narratorVoiceId, stockVoices, voiceLibrary },
   log,
   new StoryIndex(config.DATA_DIR, join(config.DATA_DIR, "audio")),
+  new SqliteRunStore(db),
 );
 
 const app = await buildHttp({
@@ -66,6 +71,7 @@ const app = await buildHttp({
   logger: log,
 });
 await app.listen({ port: config.PORT, host: config.HOST });
+await stories.recover(); // carries on stories the last process left mid-run
 void narration.prepare(); // one-off TTS in the background; cached on disk afterwards
 void ensureVoiceLibrary(voices, config.DATA_DIR, log, voiceLibrary);
 log.info(

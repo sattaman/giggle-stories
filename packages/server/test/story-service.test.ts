@@ -1,14 +1,17 @@
 // The story runner with the real graph and synthetic dependencies: overlapping and stale
-// replies, failures, and what a restarted server shows. See ADR 0002 for the policy.
+// replies, failures, retries and restarts. See ADR 0002 for the policy.
 
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { MemorySaver, type BaseCheckpointSaver } from "@langchain/langgraph";
+import type { BaseCheckpointSaver } from "@langchain/langgraph";
+import { SqliteSaver } from "@langchain/langgraph-checkpoint-sqlite";
 import { compileStoryGraph, type SpeechSynthesizer, type StructuredModel } from "@storytime/app";
 import { SyntheticModel, syntheticDeps } from "@storytime/app/testing";
 import type { StoryView } from "@storytime/domain";
+import Database from "better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { SqliteRunStore } from "../src/run-store.ts";
 import { StoryIndex } from "../src/story-index.ts";
 import { GraphStoryService, StoryConflictError, StoryNotFoundError } from "../src/story-service.ts";
 
@@ -20,16 +23,20 @@ afterEach(async () => {
   await rm(dir, { recursive: true, force: true });
 });
 
-/** A model that fails one task, or waits for `release()` before answering it. */
-function controllableModel(options: { failOn?: string; holdOn?: string } = {}) {
+/** A model that fails a task (every time, or once), or waits for `release()` before answering it. */
+function controllableModel(options: { failOn?: string; failOnce?: boolean; holdOn?: string } = {}) {
   const inner = new SyntheticModel();
+  let failures = 0;
   let release = (): void => undefined;
   const held = new Promise<void>((resolve) => {
     release = resolve;
   });
   const model: StructuredModel = {
     generate: async (request) => {
-      if (request.task === options.failOn) throw new Error(`provider down during ${request.task}`);
+      if (request.task === options.failOn && (options.failOnce !== true || failures === 0)) {
+        failures += 1;
+        throw new Error(`provider down during ${request.task}`);
+      }
       if (request.task === options.holdOn) await held;
       return inner.generate(request);
     },
@@ -48,26 +55,51 @@ function countingSpeech() {
   return { speech, calls: () => calls };
 }
 
-function service(options: { model?: StructuredModel; speech?: SpeechSynthesizer; saver?: BaseCheckpointSaver } = {}) {
-  const saver = options.saver ?? new MemorySaver();
+/** The server's storage: one SQLite database for checkpoints and run status, as in main.ts. */
+function storage(saverFor: (db: Database.Database) => BaseCheckpointSaver = (db) => new SqliteSaver(db)) {
+  const db = new Database(":memory:");
+  return { db, saver: saverFor(db) };
+}
+
+/** A server process over `store`; call it again with the same store to simulate a restart. */
+function service(
+  options: { model?: StructuredModel; speech?: SpeechSynthesizer; store?: ReturnType<typeof storage> } = {},
+) {
+  const store = options.store ?? storage();
   // The service replaces `progress` with itself.
   const deps = syntheticDeps({
     ...(options.model === undefined ? {} : { model: options.model }),
     ...(options.speech === undefined ? {} : { speech: options.speech }),
   });
   const silent = { info: () => undefined, warn: () => undefined, error: () => undefined };
-  const stories = new GraphStoryService(compileStoryGraph(saver), deps, silent, new StoryIndex(dir, join(dir, "audio")));
-  return { stories, saver };
+  const stories = new GraphStoryService(
+    compileStoryGraph(store.saver),
+    deps,
+    silent,
+    new StoryIndex(dir, join(dir, "audio")),
+    new SqliteRunStore(store.db),
+  );
+  return { stories, store };
 }
 
-/** Polls until the background run settles (not working/performing). */
-async function settled(stories: GraphStoryService, id: string): Promise<StoryView> {
+/** Polls the story's view until `done` says so. */
+async function until(stories: GraphStoryService, id: string, done: (view: StoryView) => boolean): Promise<StoryView> {
   for (let i = 0; i < 200; i++) {
     const view = await stories.view(id);
-    if (view.status !== "working" && view.status !== "performing") return view;
+    if (done(view)) return view;
     await new Promise((resolve) => setTimeout(resolve, 5));
   }
-  throw new Error("story never settled");
+  throw new Error("story never reached the expected state");
+}
+
+/** Waits for the background run to settle (not working/performing). */
+function settled(stories: GraphStoryService, id: string): Promise<StoryView> {
+  return until(stories, id, (view) => view.status !== "working" && view.status !== "performing");
+}
+
+/** Waits until a run is stuck on the held write_page call, i.e. mid-run. */
+function writing(stories: GraphStoryService, id: string): Promise<StoryView> {
+  return until(stories, id, (view) => view.stage === "writing");
 }
 
 async function toOutlineReview(stories: GraphStoryService): Promise<string> {
@@ -138,48 +170,94 @@ describe("GraphStoryService", () => {
     await expect(stories.reply(id, { kind: "outline", approved: true })).rejects.toThrow("Expected an answer");
   });
 
-  it("shows a failed run as an error that cannot currently be retried", async () => {
-    const { stories } = service({ model: controllableModel({ failOn: "write_page" }).model });
+  it("offers Try again after a failure, and carries on from the failed step only", async () => {
+    const gate = controllableModel({ failOn: "write_page", failOnce: true });
+    const { stories } = service({ model: gate.model });
     const { id } = await stories.start("Pip", "5-8");
     await settled(stories, id);
     await stories.reply(id, { kind: "answer", text: "Moon cheese" });
 
     const failed = await settled(stories, id);
-    expect(failed).toMatchObject({ status: "error", error: "Oops, the story machine got in a muddle. Let's try again!" });
-    // Gap (ADR 0002): the checkpoint still has draftPage due, but no API resumes it.
+    expect(failed).toMatchObject({ status: "error", canRetry: true, error: "Oops, the story machine got in a muddle. Let's try again!" });
     await expect(stories.reply(id, { kind: "outline", approved: true })).rejects.toBeInstanceOf(StoryConflictError);
+
+    const before = [...gate.calls];
+    await stories.retry(id);
+    expect((await settled(stories, id)).pending?.kind).toBe("outline_review");
+    // Only the failed step re-ran: casting, voices and the outline were checkpointed.
+    expect(gate.calls.slice(before.length)).toEqual(["write_page"]);
   });
 
-  it("shows an unfinished story as interrupted after a server restart", async () => {
-    const saver = new MemorySaver();
-    const first = service({ model: controllableModel({ failOn: "write_page" }).model, saver });
+  it("rejects Try again when there is nothing to carry on", async () => {
+    const { stories } = service();
+    const id = await toOutlineReview(stories);
+    await expect(stories.retry(id)).rejects.toBeInstanceOf(StoryConflictError);
+  });
+
+  it("resumes a story that was mid-run when the server restarted", async () => {
+    const store = storage();
+    const crashed = controllableModel({ holdOn: "write_page" }); // never released: the process "dies" here
+    const first = service({ model: crashed.model, store });
     const { id } = await first.stories.start("Pip", "5-8");
     await settled(first.stories, id);
     await first.stories.reply(id, { kind: "answer", text: "Moon cheese" });
-    await settled(first.stories, id);
+    await writing(first.stories, id);
 
-    const restarted = service({ saver }); // same checkpoints, empty in-memory progress
-    expect(await restarted.stories.view(id)).toMatchObject({
-      status: "error",
-      error: "This story got interrupted. Let's make a new one!",
-      characters: [{ name: "Pip" }], // the work so far is still there
-    });
+    const fresh = controllableModel();
+    const restarted = service({ model: fresh.model, store });
+    expect(await restarted.stories.view(id)).toMatchObject({ status: "error", canRetry: true, characters: [{ name: "Pip" }] });
+    await restarted.stories.recover();
+    expect((await settled(restarted.stories, id)).pending?.kind).toBe("outline_review");
+    expect(fresh.calls).not.toContain("extract_brief"); // nothing before the crash re-ran
   });
 
-  it("loses a story whose first checkpoint was never written, leaving an orphan index entry", async () => {
-    class FailingSaver extends MemorySaver {
+  it("resumes automatically only once, then leaves the story for Try again", async () => {
+    const store = storage();
+    const first = service({ model: controllableModel({ holdOn: "write_page" }).model, store });
+    const { id } = await first.stories.start("Pip", "5-8");
+    await settled(first.stories, id);
+    await first.stories.reply(id, { kind: "answer", text: "Moon cheese" });
+
+    await writing(first.stories, id);
+
+    const second = service({ model: controllableModel({ holdOn: "write_page" }).model, store });
+    await second.stories.recover(); // resumes, then "crashes" again at the same step
+    await writing(second.stories, id);
+
+    const third = service({ store });
+    await third.stories.recover();
+    expect(await third.stories.view(id)).toMatchObject({ status: "error", canRetry: true });
+    await third.stories.retry(id);
+    expect((await settled(third.stories, id)).pending?.kind).toBe("outline_review");
+  });
+
+  it("leaves waiting and finished stories alone on restart", async () => {
+    const store = storage();
+    const first = service({ store });
+    const id = await toOutlineReview(first.stories);
+    const restarted = service({ store });
+    await restarted.stories.recover();
+    expect((await restarted.stories.view(id)).status).toBe("waiting");
+  });
+
+  it("shows a story whose first checkpoint was never written as lost, not missing", async () => {
+    class FailingSaver extends SqliteSaver {
       override put(): never {
         throw new Error("disk full");
       }
     }
-    const saver = new FailingSaver();
-    const first = service({ saver });
+    const store = storage((db) => new FailingSaver(db));
+    const first = service({ store });
     const { id } = await first.stories.start("Pip", "5-8");
-    expect((await settled(first.stories, id)).status).toBe("error");
+    expect(await settled(first.stories, id)).toMatchObject({ status: "error", canRetry: false });
 
-    const restarted = service({ saver });
-    await expect(restarted.stories.view(id)).rejects.toBeInstanceOf(StoryNotFoundError);
-    expect(await restarted.stories.list()).toEqual([]); // silently skipped…
-    expect((await new StoryIndex(dir, join(dir, "audio")).list()).map((e) => e.id)).toEqual([id]); // …but still indexed
+    const restarted = service({ store });
+    expect(await restarted.stories.view(id)).toMatchObject({ status: "error", error: "This story got lost. Let's make a new one!" });
+    expect((await restarted.stories.list()).map((s) => [s.id, s.status])).toEqual([[id, "error"]]);
+  });
+
+  it("reports a story nobody has heard of as not found", async () => {
+    const { stories } = service();
+    await expect(stories.view("story_nope")).rejects.toBeInstanceOf(StoryNotFoundError);
   });
 });

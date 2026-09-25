@@ -1,6 +1,6 @@
 # ADR 0002: Story execution, recovery and retry ownership
 
-**Date:** 2026-09-26 · **Status:** proposed
+**Date:** 2026-09-26 · **Status:** accepted
 
 ## Context
 
@@ -24,7 +24,7 @@ Tests (`packages/server/test/story-service.test.ts`,
   corrections ×2 on `cast` and `writePage`. Gemini: our loop, up to 5 attempts per model,
   with model fallback on daily quota. The graph has no retry policy.
 
-## Decision (proposed)
+## Decision
 
 ### 1. Durable results, durable run status, transient progress
 
@@ -87,16 +87,25 @@ It brings durable runs, a task queue, retries and streaming, but also its own de
 persistence and auth model. Building items 1–2 is small and doesn't block that move, because
 the graph and ports stay the same.
 
-## Decisions for the owner
+### 7. Checkpoint durability
 
-1. Accept one automatic resume after a restart, or always wait for "Try again"?
-2. Accept "Try again" as a child-facing button, or retry silently in the background?
-3. Accept "no graph retry policy until task 9"?
-4. Accept Fastify as the runner until multi-account hosting?
+Runs use `durability: "sync"`: each checkpoint is saved before the next step starts and
+before `invoke` resolves. With the default `"async"`, a poll that arrives just as a run
+finishes could read the state without its final writes, and show a working story as
+interrupted. The cost is one SQLite write per superstep on the run's critical path, which
+is negligible next to model and TTS calls.
+
+## Implementation
+
+- `packages/server/src/run-store.ts`: `SqliteRunStore`, a `story_runs` table in the
+  checkpoint database.
+- `GraphStoryService`: `retry()`, `recover()` (called at startup), and `canRetry` on the view.
+- `POST /v1/stories/:id/retry`. The client's "Try again" carries on a story when
+  `canRetry` is true and offers a new story otherwise.
 
 ## Consequences
 
-- One small table and a startup reconciliation step (task 10). Everything else in this ADR is policy.
+- One small table and a startup reconciliation step.
 - Unfinished stories survive restarts instead of being thrown away.
 - Paid work can still repeat inside a node that crashed. Task 9 narrows that window; it
   can't close it completely (see the task 3 findings).

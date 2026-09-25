@@ -16,7 +16,7 @@ const empty: PersistedStory = { idea: "a rocket", cast: [], performance: [] };
 
 describe("buildView", () => {
   it("is 'working' with a friendly message while busy", () => {
-    const view = buildView({
+    const view = buildView({ run: undefined, resumable: false,
       id: "story_1",
       state: empty,
       pending: undefined,
@@ -27,13 +27,13 @@ describe("buildView", () => {
 
   it("is 'waiting' with the question when the graph is interrupted", () => {
     const pending = { kind: "clarification", question: "Friendly or grumpy?", questionAudioUrl: null, round: 1 };
-    const view = buildView({ id: "story_1", state: empty, pending, progress: idleProgress });
+    const view = buildView({ run: undefined, resumable: false, id: "story_1", state: empty, pending, progress: idleProgress });
     expect(view).toMatchObject({ status: "waiting", pending });
   });
 
   it("streams performed segments while performing, then is 'done'", () => {
     const performed = new Map([[0, { audioUrl: "http://a/0.wav", durationMs: 900 }]]);
-    const performing = buildView({
+    const performing = buildView({ run: undefined, resumable: false,
       id: "story_1",
       state: { ...empty, script },
       pending: undefined,
@@ -43,7 +43,7 @@ describe("buildView", () => {
     expect(performing.performance?.segments.map((s) => s.audioUrl)).toEqual(["http://a/0.wav", null]);
 
     const performance = script.segments.map((s, index) => ({ ...s, index, audioUrl: `http://a/${String(index)}.wav`, durationMs: 1 }));
-    const done = buildView({ id: "story_1", state: { ...empty, script, performance }, pending: undefined, progress: idleProgress });
+    const done = buildView({ run: undefined, resumable: false, id: "story_1", state: { ...empty, script, performance }, pending: undefined, progress: idleProgress });
     expect(done.status).toBe("done");
     expect(done.performance?.complete).toBe(true);
   });
@@ -58,9 +58,17 @@ describe("buildView", () => {
     expect(parsed.cast[0]).toMatchObject({ name: "Orla", hello: "Hello! I'm Orla.", voiceArchetype: "kid-hero-female" });
   });
 
-  it("reports a friendly error for a run that died", () => {
-    const view = buildView({ id: "story_1", state: empty, pending: undefined, progress: idleProgress });
-    expect(view.status).toBe("error");
+  it("offers to carry on a run that stopped with work still due", () => {
+    const view = buildView({ run: undefined, resumable: true, id: "story_1", state: empty, pending: undefined, progress: idleProgress });
+    expect(view).toMatchObject({ status: "error", canRetry: true, error: "This story got interrupted. Let's carry on!" });
+  });
+
+  it("shows a failed run as retryable while its checkpoint has work due", () => {
+    const run = { state: "failed" as const, error: "provider down", resumes: 0 };
+    const failed = buildView({ run, resumable: true, id: "story_1", state: empty, pending: undefined, progress: idleProgress });
+    expect(failed).toMatchObject({ status: "error", canRetry: true });
+    const lost = buildView({ run, resumable: false, id: "story_1", state: empty, pending: undefined, progress: idleProgress });
+    expect(lost).toMatchObject({ status: "error", canRetry: false, error: "This story got lost. Let's make a new one!" });
   });
 });
 
@@ -76,11 +84,13 @@ describe("http", () => {
     title: null,
     performance: null,
     error: null,
+    canRetry: false,
   };
   const stories: StoryService = {
     start: () => Promise.resolve(view),
     view: (id) => (id === "story_abc" ? Promise.resolve(view) : Promise.reject(new StoryNotFoundError(id))),
     reply: () => Promise.reject(new StoryConflictError("Story isn't waiting for a reply")),
+    retry: () => Promise.reject(new StoryConflictError("Story can't be carried on")),
     list: () => Promise.resolve([]),
   };
   const app = () =>
@@ -129,6 +139,11 @@ describe("http", () => {
       url: "/v1/stories/story_abc/replies",
       payload: { kind: "answer", text: "grumpy" },
     });
+    expect(res.statusCode).toBe(409);
+  });
+
+  it("returns 409 when retrying a story that can't be carried on", async () => {
+    const res = await (await app()).inject({ method: "POST", url: "/v1/stories/story_abc/retry" });
     expect(res.statusCode).toBe(409);
   });
 });

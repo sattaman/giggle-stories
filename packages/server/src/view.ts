@@ -11,6 +11,7 @@ import {
   type StoryView,
 } from "@storytime/domain";
 import { z } from "zod";
+import type { RunRecord } from "./run-store.ts";
 
 /**
  * Characters saved before `hello` / `voiceArchetype` existed (2026-09-25) get sensible
@@ -40,19 +41,26 @@ export interface LiveProgress {
   readonly busy: boolean;
   readonly stage: StoryStage | null;
   readonly message: string | null;
-  readonly error: string | null;
   readonly performed: ReadonlyMap<number, { readonly audioUrl: string; readonly durationMs: number }>;
 }
 
-export const idleProgress: LiveProgress = { busy: false, stage: null, message: null, error: null, performed: new Map() };
+export const idleProgress: LiveProgress = { busy: false, stage: null, message: null, performed: new Map() };
+
+export const FAILED_MESSAGE = "Oops, the story machine got in a muddle. Let's try again!";
+const INTERRUPTED_MESSAGE = "This story got interrupted. Let's carry on!";
+const LOST_MESSAGE = "This story got lost. Let's make a new one!";
 
 export function buildView(input: {
   readonly id: string;
   readonly state: PersistedStory;
   readonly pending: unknown;
   readonly progress: LiveProgress;
+  /** Durable run status (ADR 0002); undefined when no run is in flight or failed. */
+  readonly run: RunRecord | undefined;
+  /** The checkpoint still has work due, so `invoke(null)` can carry on. */
+  readonly resumable: boolean;
 }): StoryView {
-  const { id, state, progress } = input;
+  const { id, state, progress, run, resumable } = input;
   const parsedPending = Pending.safeParse(input.pending);
   const pending = !progress.busy && parsedPending.success ? parsedPending.data : null;
 
@@ -77,15 +85,17 @@ export function buildView(input: {
         };
 
   let status: StoryView["status"];
-  let error = progress.error;
-  if (error !== null) status = "error";
-  else if (progress.busy) status = progress.stage === "performing" ? "performing" : "working";
-  else if (pending !== null) status = "waiting";
+  let error: string | null = null;
+  if (progress.busy) status = progress.stage === "performing" ? "performing" : "working";
+  else if (run?.state === "failed") {
+    status = "error";
+    error = resumable ? FAILED_MESSAGE : LOST_MESSAGE;
+  } else if (pending !== null) status = "waiting";
   else if (performance?.complete === true) status = "done";
   else {
-    // Idle with nothing to do: the run died (e.g. server restart mid-step).
+    // Idle with work still due: the server stopped mid-run (e.g. a restart).
     status = "error";
-    error = "This story got interrupted. Let's make a new one!";
+    error = resumable ? INTERRUPTED_MESSAGE : LOST_MESSAGE;
   }
 
   return {
@@ -99,5 +109,6 @@ export function buildView(input: {
     title: state.outline?.storyTitle ?? null,
     performance,
     error,
+    canRetry: status === "error" && resumable,
   };
 }

@@ -86,6 +86,12 @@ export async function buildHttp(deps: HttpDeps): Promise<FastifyInstance> {
     return deps.stories.reply(id, parseRequest(ReplyBody, request.body));
   });
 
+  // Carries on a story that stopped part-way (view.canRetry); 409 otherwise.
+  app.post("/v1/stories/:id/retry", async (request) => {
+    const { id } = parseRequest(StoryParams, request.params);
+    return deps.stories.retry(id);
+  });
+
   app.get("/v1/audio/:story/:file", async (request, reply) => {
     const { story, file } = parseRequest(AudioParams, request.params);
     const path = deps.audioPath(story, file);

@@ -1,15 +1,23 @@
 // Runs stories through the LangGraph graph in the background and answers
 // "what does the child see now?". One run at a time per story.
+//
+// Recovery (ADR 0002): run status is durable (RunStore). A failed run can be carried on
+// with retry(); after a restart, recover() resumes runs that were in flight, once.
 
 import { randomUUID } from "node:crypto";
 import type { Logger, ProgressSink, StoryDeps, StoryGraph } from "@storytime/app";
 import type { AgeBand, ReplyBody, StoryStage, StorySummary, StoryView } from "@storytime/domain";
 import { Command } from "@langchain/langgraph";
 import { z } from "zod";
+import type { RunStore } from "./run-store.ts";
 import type { StoryIndex } from "./story-index.ts";
 import { PersistedStory, buildView, idleProgress, type LiveProgress } from "./view.ts";
 
 export class StoryConflictError extends Error {}
+export class StoryNotFoundError extends Error {}
+
+/** Automatic resumes after restarts before a story is marked failed (the child can still retry). */
+const MAX_AUTOMATIC_RESUMES = 1;
 
 function firstInterruptValue(tasks: readonly { readonly interrupts: readonly { readonly value?: unknown }[] }[]): unknown {
   for (const task of tasks) {
@@ -18,19 +26,25 @@ function firstInterruptValue(tasks: readonly { readonly interrupts: readonly { r
   }
   return undefined;
 }
-export class StoryNotFoundError extends Error {}
 
 interface MutableProgress {
   busy: boolean;
   stage: StoryStage | null;
   message: string | null;
-  error: string | null;
   performed: Map<number, { audioUrl: string; durationMs: number }>;
 }
+
+/** What a run does: start a story, answer a pause, or carry on from the last checkpoint. */
+type RunInput =
+  | { readonly kind: "start"; readonly storyId: string; readonly idea: string; readonly ageBand: AgeBand }
+  | { readonly kind: "resume"; readonly value: unknown }
+  | { readonly kind: "continue"; readonly automatic: boolean };
 
 export interface StoryService {
   start(idea: string, ageBand: AgeBand): Promise<StoryView>;
   reply(id: string, body: ReplyBody): Promise<StoryView>;
+  /** Carries on a story that stopped part-way (`view.canRetry`). */
+  retry(id: string): Promise<StoryView>;
   view(id: string): Promise<StoryView>;
   list(): Promise<StorySummary[]>;
 }
@@ -44,6 +58,7 @@ export class GraphStoryService implements StoryService, ProgressSink {
     deps: Omit<StoryDeps, "progress">,
     private readonly log: Logger,
     private readonly index: StoryIndex,
+    private readonly runs: RunStore,
   ) {
     this.deps = { ...deps, progress: this };
   }
@@ -64,7 +79,7 @@ export class GraphStoryService implements StoryService, ProgressSink {
     const id = `story_${randomUUID().replaceAll("-", "")}`;
     this.log.info({ storyId: id, ageBand }, "story started");
     await this.index.add({ id, createdAt: new Date().toISOString(), ageBand });
-    this.run(id, { storyId: id, idea, ageBand });
+    this.run(id, { kind: "start", storyId: id, idea, ageBand });
     return this.view(id);
   }
 
@@ -74,21 +89,30 @@ export class GraphStoryService implements StoryService, ProgressSink {
     if (body.kind === "answer" && current.pending.kind !== "clarification") throw new StoryConflictError("Expected an outline decision");
     if (body.kind === "outline" && current.pending.kind !== "outline_review") throw new StoryConflictError("Expected an answer");
 
-    const resume =
+    const value =
       body.kind === "answer" ? body.text : body.approved ? { approved: true } : { approved: false, feedback: body.feedback };
-    this.run(id, { resume });
+    this.run(id, { kind: "resume", value });
+    return this.view(id);
+  }
+
+  async retry(id: string): Promise<StoryView> {
+    if (!(await this.view(id)).canRetry) throw new StoryConflictError("Story can't be carried on");
+    this.log.info({ storyId: id }, "story retried");
+    this.run(id, { kind: "continue", automatic: false });
     return this.view(id);
   }
 
   async view(id: string): Promise<StoryView> {
     const snapshot = await this.graph.getState({ configurable: { thread_id: id } });
     const progress: LiveProgress = this.live.get(id) ?? idleProgress;
+    const run = this.runs.get(id);
     // Checkpoint values are untyped JSON: validate before use.
     const values = z.record(z.string(), z.unknown()).parse(snapshot.values);
-    if (Object.keys(values).length === 0 && !this.live.has(id)) throw new StoryNotFoundError(id);
+    if (Object.keys(values).length === 0 && !this.live.has(id) && run === undefined) throw new StoryNotFoundError(id);
 
     const pending = firstInterruptValue(snapshot.tasks);
-    return buildView({ id, state: PersistedStory.parse(values), pending, progress });
+    const resumable = snapshot.next.length > 0 && pending === undefined;
+    return buildView({ id, state: PersistedStory.parse(values), pending, progress, run, resumable });
   }
 
   async list(): Promise<StorySummary[]> {
@@ -115,39 +139,71 @@ export class GraphStoryService implements StoryService, ProgressSink {
     return summaries;
   }
 
+  /**
+   * Call once at startup. Resumes runs the previous process left in flight; a story that
+   * has already been resumed automatically is marked failed instead, so a crash can't loop.
+   */
+  async recover(): Promise<void> {
+    for (const id of this.runs.running()) {
+      const snapshot = await this.graph.getState({ configurable: { thread_id: id } });
+      const waiting = firstInterruptValue(snapshot.tasks) !== undefined;
+      if (snapshot.next.length === 0 || waiting) {
+        this.runs.clear(id); // it finished or paused before the process stopped
+        continue;
+      }
+      if ((this.runs.get(id)?.resumes ?? 0) >= MAX_AUTOMATIC_RESUMES) {
+        this.log.warn({ storyId: id }, "story interrupted again after an automatic resume; leaving it for the child");
+        this.runs.markFailed(id, "interrupted repeatedly");
+        continue;
+      }
+      this.log.info({ storyId: id, next: snapshot.next }, "resuming story after restart");
+      this.run(id, { kind: "continue", automatic: true });
+    }
+  }
+
   // ── internals ──
   private progressFor(id: string): MutableProgress {
     let progress = this.live.get(id);
     if (progress === undefined) {
-      progress = { busy: false, stage: null, message: null, error: null, performed: new Map() };
+      progress = { busy: false, stage: null, message: null, performed: new Map() };
       this.live.set(id, progress);
     }
     return progress;
   }
 
-  private run(id: string, input: { storyId: string; idea: string; ageBand: AgeBand } | { resume: unknown }): void {
+  private run(id: string, input: RunInput): void {
     const progress = this.progressFor(id);
     if (progress.busy) throw new StoryConflictError("Story is already working");
     progress.busy = true;
-    progress.error = null;
     progress.stage = "understanding";
     progress.message = "Thinking…";
+    this.runs.markRunning(id, { automatic: input.kind === "continue" && input.automatic });
     const started = performance.now();
 
+    const graphInput: Parameters<StoryGraph["invoke"]>[0] =
+      input.kind === "start"
+        ? { storyId: input.storyId, idea: input.idea, ageBand: input.ageBand }
+        : input.kind === "resume"
+          ? new Command({ resume: input.value })
+          : null; // carry on from the last checkpoint
     this.graph
-      .invoke("resume" in input ? new Command({ resume: input.resume }) : input, {
+      .invoke(graphInput, {
         configurable: { thread_id: id },
         context: { deps: this.deps },
         metadata: { thread_id: id }, // groups the whole story as one LangSmith thread
         recursionLimit: 60,
         runName: "story",
+        // Save each checkpoint before moving on (and before invoke resolves). With the default
+        // "async", a poll right after a run could miss its last writes and show a false error.
+        durability: "sync",
       })
       .then(() => {
+        this.runs.clear(id);
         this.log.info({ storyId: id, ms: Math.round(performance.now() - started) }, "story step finished");
       })
       .catch((error: unknown) => {
+        this.runs.markFailed(id, error instanceof Error ? error.message : String(error));
         this.log.error({ storyId: id, error: error instanceof Error ? error.stack : String(error) }, "story step failed");
-        progress.error = "Oops, the story machine got in a muddle. Let's try again!";
       })
       .finally(() => {
         progress.busy = false;
