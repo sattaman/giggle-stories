@@ -1,0 +1,2 @@
+# False positive: OPENROUTER_API_KEY= is empty; gitleaks read the next line (LANGSMITH_TRACING=true) as its value.
+0dcbdb366a3a41f0a27a3684324e6acecb213564:.env.example:generic-api-key:4
