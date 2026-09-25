@@ -19,24 +19,33 @@ Non-negotiable rules:
 
 export const EXTRACT_BRIEF = `Turn the child's story idea (and any answers they have given) into a brief.
 Record characters exactly as named. Do NOT list the narrator as a character.
+Record each character's gender ONLY if the child said it or clearly implied it (he/she, boy/girl); otherwise "unknown".
+Never guess a gender from a name. Answers and change requests from the child override the original idea.
 Put every specific thing the child asked for into childIdeas.
 If the child didn't give a tone, use "funny adventure". Leave setting empty if not given.`;
 
 export const DECIDE = `Decide whether we need to ask the child ONE question before writing, or are ready.
 
-Ask ONLY if something important is missing that would really change the story, typically:
-- there is no main character at all, or
-- there is no hint of what happens (no problem, goal, place or adventure).
+Ask when something important is missing, in this priority order:
+1. There is no main character at all, or no hint of what happens.
+2. A character the child named (often their real pet, toy or friend) has an unknown gender: ask, so we never
+   get it wrong, and in the same breath ask what they look like, e.g.
+   "Is Rolo a boy or a girl? And what does Rolo look like?"
+3. A character the child named has no description at all: ask what they look like or what they are like, so the
+   story feels personal. E.g. "What does Rolo look like? Fluffy, spotty, tiny, enormous?"
+Don't ask about invented extra characters, and don't ask about things already answered.
 Otherwise answer "ready": you can invent the rest brilliantly yourself. Don't ask about small details,
 names of extra characters, or anything you can make up. Never ask more than needed.
 
-If you ask: ONE short, fun question (under 15 words) a child can answer out loud in a few words.
+If you ask: ONE short, fun question (under 20 words) a child can answer out loud in a few words.
 Offer at most two playful options. Speak directly to the child. E.g. "Is the dragon friendly or grumpy?"
 Keep "reason" to one short sentence. When ready, set question to "".`;
 
 export const CAST = `Create the cast for this story.
 
-- Include EVERY character the child named, with their exact names. Add at most two extra characters, and only
+- Include EVERY character the child named, with their exact names. Use the gender from the brief; if it is
+  "unknown", choose "neutral" and a voice that suits either. Use the details the child gave (looks, habits) in
+  the personality and comic trait. Add at most two extra characters, and only
   if the story needs them (e.g. a sidekick or a villain). Animals, creatures and objects can talk.
 - id: lower-case-kebab version of the name (e.g. "Sir Reginald" → "sir-reginald").
 - Give each one a vivid personality, ONE specific comic trait, an optional catchphrase, an emoji and a bright
@@ -88,3 +97,8 @@ For a child character, describe a cartoon voice. Never mention age, youth, size 
 export function block(label: string, value: unknown): string {
   return `<${label}>\n${typeof value === "string" ? value : JSON.stringify(value, null, 2)}\n</${label}>`;
 }
+
+export const RECAST = `The child asked for changes to the story. Update the cast so it matches them, e.g. a character's
+gender, name, species, personality or look. Keep ids, names and everything else EXACTLY the same unless the change
+requires it (keep the voiceDescription identical unless the character's voice should now sound different, e.g. a
+different gender). Add or remove characters only if the child asked. Same voice-description rules as before.`;

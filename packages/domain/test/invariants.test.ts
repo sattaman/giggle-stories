@@ -34,8 +34,8 @@ describe("childVoiceCues", () => {
 describe("missingCharacters", () => {
   it("reports characters the child named that are absent or renamed", () => {
     const sketches = [
-      { name: "Pip", role: "hero" as const, details: "" },
-      { name: "Mr Wobbles", role: "creature" as const, details: "" },
+      { name: "Pip", role: "hero" as const, gender: "female" as const, details: "" },
+      { name: "Mr Wobbles", role: "creature" as const, gender: "unknown" as const, details: "" },
     ];
     expect(missingCharacters(sketches, [pip])).toEqual(["Mr Wobbles"]);
   });

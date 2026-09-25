@@ -14,7 +14,7 @@ import {
 
 export const brief: StoryBrief = {
   premise: "Pip the inventor builds a rocket to find the lost moon cheese.",
-  characters: [{ name: "Pip", role: "hero", details: "inventor, loves jam" }],
+  characters: [{ name: "Pip", role: "hero", gender: "female", details: "inventor, loves jam" }],
   setting: "a back garden",
   tone: "funny adventure",
   childIdeas: ["a rocket made from a bin", "moon cheese"],

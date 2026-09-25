@@ -3,7 +3,7 @@
 //   START → understand ─(question?)→ askQuestion ⏸ ─→ understand   (max 2 rounds)
 //                └─(ready)→ castCharacters ─┬→ designVoices ────────────────┐
 //                                          └→ planOutline → draftPage ─────┴→ reviewOutline ⏸
-//   reviewOutline ─(changes)→ reviseOutline → redraftPage → reviewOutline
+//   reviewOutline ─(changes)→ reviseOutline → recast → redraftPage → reviewOutline
 //                 └─(yes!)→ performPage → END
 //
 // Page 1 is drafted while voices are designed (both slow), so after "Yes!" the child
@@ -134,31 +134,40 @@ const designVoices: Node = async (state, config) => {
   const deps = depsOf(config);
   const writer = new StoryWriter(deps.model);
   deps.progress.stage(state.storyId, "casting", "Giving everyone a voice…");
-
   const cast = await Promise.all(
-    state.cast.map(async (character, index): Promise<Character> => {
-      const { preview, ...voice } = await voiceFor(deps, writer, character, index);
-      let sampleUrl: string | null = null;
-      try {
-        // Prefer the free preview from voice design; otherwise say hello in character (1 TTS call).
-        const wav =
-          preview ??
-          (
-            await deps.speech.synthesize({
-              text: character.catchphrase ?? `Hello! I'm ${character.name}.`,
-              voiceId: voice.voiceId,
-              style: "introducing myself, in character",
-            })
-          ).wav;
-        sampleUrl = await deps.audio.save(state.storyId, `voice-${character.id}`, wav);
-      } catch (error: unknown) {
-        deps.log.warn({ storyId: state.storyId, character: character.id, error: String(error) }, "voice sample failed");
-      }
-      return { ...character, voice: { ...voice, sampleUrl } };
-    }),
+    state.cast.map((character, index) => withVoice(deps, writer, state.storyId, character, index, "")),
   );
   return { cast };
 };
+
+/** Designs (or falls back to) a voice for a character and stores a short sample clip. */
+async function withVoice(
+  deps: StoryDeps,
+  writer: StoryWriter,
+  storyId: string,
+  character: CharacterProfile,
+  index: number,
+  sampleSuffix: string,
+): Promise<Character> {
+  const { preview, ...voice } = await voiceFor(deps, writer, character, index);
+  let sampleUrl: string | null = null;
+  try {
+    // Prefer the free preview from voice design; otherwise say hello in character (1 TTS call).
+    const wav =
+      preview ??
+      (
+        await deps.speech.synthesize({
+          text: character.catchphrase ?? `Hello! I'm ${character.name}.`,
+          voiceId: voice.voiceId,
+          style: "introducing myself, in character",
+        })
+      ).wav;
+    sampleUrl = await deps.audio.save(storyId, `voice-${character.id}${sampleSuffix}`, wav);
+  } catch (error: unknown) {
+    deps.log.warn({ storyId, character: character.id, error: String(error) }, "voice sample failed");
+  }
+  return { ...character, voice: { ...voice, sampleUrl } };
+}
 
 /** Designed voice → rewritten description → catalogue voice. The child never sees a failure. */
 async function voiceFor(
@@ -207,14 +216,39 @@ const reviewOutline: Node = (state) => {
 
 const reviseOutline: Node = async (state, config) => {
   const deps = depsOf(config);
+  const writer = new StoryWriter(deps.model);
   deps.progress.stage(state.storyId, "outlining", "Changing the plan…");
-  const revised = await new StoryWriter(deps.model).reviseOutline(
+  const feedback = required(state.outlineFeedback, "outlineFeedback");
+  // The change is part of the child's brief from now on (e.g. "Rolo is a girl").
+  const answers = [...state.answers, { question: "Changes the child asked for", answer: feedback }];
+  const brief = await writer.extractBrief(state.idea, answers);
+  const revised = await writer.reviseOutline(brief, state.cast, required(state.outline, "outline"), feedback);
+  return { answers, brief, outline: revised };
+};
+
+/** Applies the change to the cast; only characters whose voice should change get a new one. */
+const recast: Node = async (state, config) => {
+  const deps = depsOf(config);
+  const writer = new StoryWriter(deps.model);
+  deps.progress.stage(state.storyId, "casting", "Updating your characters…");
+  const updated = await writer.recast(
     required(state.brief, "brief"),
     state.cast,
-    required(state.outline, "outline"),
     required(state.outlineFeedback, "outlineFeedback"),
   );
-  return { outline: revised };
+  const before = new Map(state.cast.map((c) => [c.id, c]));
+  const round = String(state.answers.length);
+  const cast = await Promise.all(
+    updated.map(async (character, index): Promise<Character> => {
+      const old = before.get(character.id);
+      const sameVoice =
+        old?.voice !== undefined && old.gender === character.gender && old.voiceDescription === character.voiceDescription;
+      if (sameVoice) return { ...character, voice: old.voice };
+      deps.log.info({ storyId: state.storyId, character: character.id }, "character changed; designing a new voice");
+      return withVoice(deps, writer, state.storyId, character, index, `-r${round}`);
+    }),
+  );
+  return { cast };
 };
 
 const draftPage: Node = async (state, config) => {
@@ -264,6 +298,7 @@ export function buildStoryGraph() {
     .addNode("draftPage", draftPage)
     .addNode("reviewOutline", reviewOutline, { ends: ["performPage", "reviseOutline"] })
     .addNode("reviseOutline", reviseOutline)
+    .addNode("recast", recast)
     // Same work as draftPage; a separate node because the join below fires only once.
     .addNode("redraftPage", draftPage)
     .addNode("performPage", performPage)
@@ -276,7 +311,8 @@ export function buildStoryGraph() {
     .addEdge("castCharacters", "planOutline")
     .addEdge("planOutline", "draftPage")
     .addEdge(["designVoices", "draftPage"], "reviewOutline")
-    .addEdge("reviseOutline", "redraftPage")
+    .addEdge("reviseOutline", "recast")
+    .addEdge("recast", "redraftPage")
     .addEdge("redraftPage", "reviewOutline")
     .addEdge("performPage", END);
 }

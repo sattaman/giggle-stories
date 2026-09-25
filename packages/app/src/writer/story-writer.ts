@@ -20,6 +20,7 @@ import {
   EXTRACT_BRIEF,
   OUTLINE,
   REVISE_OUTLINE,
+  RECAST,
   REWRITE_VOICE,
   STORYTELLER,
   WRITE_PAGE,
@@ -75,6 +76,25 @@ export class StoryWriter {
     const seen = new Set<string>();
     return characters.map((character) => {
       let id = slugify(character.name) || "character";
+      while (seen.has(id)) id = `${id}-2`;
+      seen.add(id);
+      return { ...character, id };
+    });
+  }
+
+  /** Applies the child's change request to an existing cast (ids kept stable). */
+  async recast(brief: StoryBrief, cast: readonly CharacterProfile[], feedback: string): Promise<CharacterProfile[]> {
+    const { characters } = await this.model.generate({
+      task: "recast_characters",
+      schema: Cast,
+      system: `${STORYTELLER}\n\n${CAST}\n\n${RECAST}`,
+      prompt: [block("brief", brief), block("current_cast", cast), block("child_changes", feedback)].join("\n\n"),
+      creative: false,
+    });
+    const byName = new Map(cast.map((c) => [c.name.trim().toLowerCase(), c.id]));
+    const seen = new Set<string>();
+    return characters.map((character) => {
+      let id = byName.get(character.name.trim().toLowerCase()) ?? (slugify(character.name) || "character");
       while (seen.has(id)) id = `${id}-2`;
       seen.add(id);
       return { ...character, id };

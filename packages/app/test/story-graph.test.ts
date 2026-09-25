@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import { compileStoryGraph } from "../src/graph/story-graph.ts";
 import { FakeModel, FakeVoices, RecordingProgress, brief, cast, decisions, deps, outline, script } from "./fakes.ts";
 
-function setup(options: { decide: unknown[]; rejectVoices?: boolean }) {
+const pipAsBoy = { characters: cast.characters.map((c) => ({ ...c, gender: "male", voiceDescription: "A bright, bouncy cartoon hero's voice, male." })) };
+
+function setup(options: { decide: unknown[]; rejectVoices?: boolean; recast?: unknown }) {
   const model = new FakeModel({
     extract_brief: [brief],
     decide_clarification: options.decide,
@@ -12,6 +14,7 @@ function setup(options: { decide: unknown[]; rejectVoices?: boolean }) {
     revise_outline: [outline("Revised plan")],
     write_page: [script],
     rewrite_voice: [{ voiceDescription: "A bright, bouncy cartoon voice with a British accent." }],
+    recast_characters: [options.recast ?? cast],
   });
   const progress = new RecordingProgress();
   const voices = new FakeVoices(options.rejectVoices ?? false);
@@ -24,7 +27,7 @@ const start = { storyId: "story-1", idea: "Pip builds a rocket" };
 
 describe("story graph", () => {
   it("asks a question, takes changes to the outline, then performs page one", async () => {
-    const { graph, config, model, progress } = setup({ decide: [decisions.ask, decisions.ready] });
+    const { graph, config, model, progress, voices } = setup({ decide: [decisions.ask, decisions.ready], recast: pipAsBoy });
 
     const first = await graph.invoke(start, config);
     expect(isInterrupted(first)).toBe(true);
@@ -37,9 +40,13 @@ describe("story graph", () => {
     expect(second.answers).toEqual([{ question: "What is Pip looking for?", answer: "Moon cheese!" }]);
     expect(second.cast[0]?.voice).toMatchObject({ voiceId: "voice_pip", source: "designed" });
 
-    const third = await graph.invoke(new Command({ resume: { approved: false, feedback: "Add a dog" } }), config);
+    const third = await graph.invoke(new Command({ resume: { approved: false, feedback: "Pip is a boy" } }), config);
     if (!isInterrupted(third)) throw new Error("expected second outline review");
     expect(third[INTERRUPT][0]?.value).toMatchObject({ kind: "outline_review", outline: { storyTitle: "Revised plan" } });
+    // The change reached the characters: new gender, and a freshly designed voice for it.
+    expect(third.cast[0]).toMatchObject({ gender: "male", voice: { source: "designed" } });
+    expect(voices.designed).toHaveLength(2);
+    expect(third.answers.at(-1)).toEqual({ question: "Changes the child asked for", answer: "Pip is a boy" });
 
     const done = await graph.invoke(new Command({ resume: { approved: true } }), config);
     expect(isInterrupted(done)).toBe(false);
@@ -60,6 +67,15 @@ describe("story graph", () => {
     if (!isInterrupted(afterSecond)) throw new Error("expected outline review");
     expect(afterSecond[INTERRUPT][0]?.value).toMatchObject({ kind: "outline_review" });
     expect(model.calls.filter((t) => t === "decide_clarification")).toHaveLength(2);
+  });
+
+  it("keeps a character's voice when a change doesn't affect it", async () => {
+    const { graph, config, voices } = setup({ decide: [decisions.ready] });
+    await graph.invoke(start, config);
+    const revised = await graph.invoke(new Command({ resume: { approved: false, feedback: "Make it spookier" } }), config);
+    if (!isInterrupted(revised)) throw new Error("expected outline review");
+    expect(voices.designed).toHaveLength(1);
+    expect(revised.cast[0]?.voice?.voiceId).toBe("voice_pip");
   });
 
   it("falls back to a catalogue voice when voice design is rejected", async () => {

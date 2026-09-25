@@ -23,6 +23,7 @@ export type SpeakerId = z.infer<typeof SpeakerId>;
 export const CharacterSketch = z.object({
   name: z.string().min(1).max(60).describe("Exactly as the child said it. Never rename."),
   role: z.enum(["hero", "sidekick", "villain", "friend", "grown-up", "creature", "other"]),
+  gender: z.enum(["female", "male", "unknown"]).describe('Only what the child said or clearly implied (e.g. "she"). Otherwise "unknown".'),
   details: z.string().max(1500).describe("Everything the child said about this character, in their words."),
 });
 export type CharacterSketch = z.infer<typeof CharacterSketch>;
