@@ -41,13 +41,38 @@ export function sanitizeVoiceDescription(description: string): string {
     .trim();
 }
 
+/**
+ * A forgiving key for names heard through speech-to-text: "Skye"/"sky", "Orla"/"Orlaa",
+ * "Lily"/"Lilly"/"Lillie" all match.
+ */
+export function nameKey(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[^a-z]/g, "")
+    .replace(/(ie|ey|ee)$/, "y")
+    .replace(/(.)e$/, "$1")
+    .replace(/(.)\1+/g, "$1");
+}
+
+/** Keeps the first of any characters whose names match by nameKey. */
+export function dedupeByName<T extends { readonly name: string }>(items: readonly T[]): T[] {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    const key = nameKey(item.name);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 /** Every character the child named must survive into the cast, unrenamed. */
 export function missingCharacters(
   sketches: readonly CharacterSketch[],
   cast: readonly CharacterProfile[],
 ): string[] {
-  const castNames = new Set(cast.map((c) => c.name.trim().toLowerCase()));
-  return sketches.map((s) => s.name).filter((name) => !castNames.has(name.trim().toLowerCase()));
+  const castNames = new Set(cast.map((c) => nameKey(c.name)));
+  return sketches.map((s) => s.name).filter((name) => !castNames.has(nameKey(name)));
 }
 
 export function scriptProblems(script: PageScript, cast: readonly CharacterProfile[]): string[] {

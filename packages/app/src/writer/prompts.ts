@@ -42,8 +42,12 @@ Non-negotiable rules:
 
 export const EXTRACT_BRIEF = `Turn the child's story idea (and any answers they have given) into a brief.
 Record characters exactly as named. Do NOT list the narrator as a character.
-Record each character's gender ONLY if the child said it or clearly implied it (he/she, boy/girl); otherwise "unknown".
-Never guess a gender from a name. Answers and change requests from the child override the original idea.
+Record each character's gender if the child said it or clearly implied it: he/she/his/her, boy/girl, and
+relationship words (brother, son, dad, uncle, grandad → male; sister, daughter, mum, aunt, nan → female).
+Otherwise "unknown". Never guess a gender from a name.
+The idea may come from speech-to-text, so the same name can appear with different spellings or capitalisation
+(e.g. "sky" and "Skye", "Orla" and "Orlaa"). Treat names that sound the same as ONE character (merge their
+details) and use the most name-like spelling (capitalised, e.g. "Skye"). Answers and change requests from the child override the original idea.
 Put every specific thing the child asked for into childIdeas.
 If the child didn't give a tone, use "funny adventure". Leave setting empty if not given.`;
 

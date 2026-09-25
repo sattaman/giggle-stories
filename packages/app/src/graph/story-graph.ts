@@ -74,6 +74,11 @@ function depsOf(config: { readonly context?: Ctx | undefined }): StoryDeps {
   return deps;
 }
 
+/** Built-in voice for the narrator when designed voices can't be used. */
+function narratorFallback(deps: StoryDeps): string {
+  return deps.voices.fallback("male", 3);
+}
+
 function required<T>(value: T | undefined, what: string): T {
   if (value === undefined) throw new Error(`Story state is missing ${what}`);
   return value;
@@ -99,6 +104,7 @@ const understand: Node = async (state, config) => {
     const speech = await deps.speech.synthesize({
       text: decision.question,
       voiceId: deps.narratorVoiceId,
+      fallbackVoice: narratorFallback(deps),
       style: "warm, curious, talking to a child",
     });
     audioUrl = await deps.audio.save(state.storyId, `question-${String(state.answers.length + 1)}`, speech.wav);
@@ -160,7 +166,12 @@ async function withVoice(
     let wav: Uint8Array | undefined;
     try {
       wav = (
-        await deps.speech.synthesize({ text: character.hello, voiceId: voice.voiceId, style: "saying hello to a new friend, in character" })
+        await deps.speech.synthesize({
+          text: character.hello,
+          voiceId: voice.voiceId,
+          fallbackVoice: deps.voices.fallback(character.gender, index),
+          style: "saying hello to a new friend, in character",
+        })
       ).wav;
     } catch (error: unknown) {
       deps.log.warn({ storyId, character: character.id, error: String(error) }, "hello line failed; using preview");
@@ -283,13 +294,15 @@ const performPage: Node = async (state, config) => {
   const script = required(state.script, "script");
   deps.progress.stage(state.storyId, "performing", "Warming up the voices…");
   const voiceOf = new Map(state.cast.map((c) => [c.id, c.voice?.voiceId]));
+  const fallbackOf = new Map(state.cast.map((c, index) => [c.id, deps.voices.fallback(c.gender, index)]));
 
   const performed = await mapWithConcurrency(script.segments, SEGMENT_CONCURRENCY, async (segment, index): Promise<PerformedSegment> => {
     const voiceId = segment.speaker === "narrator" ? deps.narratorVoiceId : voiceOf.get(segment.speaker);
     const base = { index, speaker: segment.speaker, text: segment.text, style: segment.style };
     if (voiceId === undefined) return { ...base, audioUrl: null, durationMs: null };
     try {
-      const speech = await deps.speech.synthesize({ text: segment.text, voiceId, style: segment.style });
+      const fallbackVoice = segment.speaker === "narrator" ? narratorFallback(deps) : (fallbackOf.get(segment.speaker) ?? "Puck");
+      const speech = await deps.speech.synthesize({ text: segment.text, voiceId, fallbackVoice, style: segment.style });
       const audioUrl = await deps.audio.save(state.storyId, `page-${String(script.page)}-${String(index).padStart(2, "0")}`, speech.wav);
       deps.progress.segmentPerformed(state.storyId, { index, audioUrl, durationMs: speech.durationMs });
       return { ...base, audioUrl, durationMs: speech.durationMs };

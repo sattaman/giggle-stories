@@ -127,7 +127,12 @@ export class Narration {
         continue;
       }
       try {
-        const { wav } = await this.speech.synthesize({ text: line.text, voiceId: this.narratorVoiceId, style: line.style });
+        const { wav } = await this.speech.synthesize({
+          text: line.text,
+          voiceId: this.narratorVoiceId,
+          fallbackVoice: "Charon",
+          style: line.style,
+        });
         this.clips.set(key, await this.audio.save("narration", name, wav));
       } catch (error: unknown) {
         this.log.warn({ key, error: String(error) }, "narration clip failed");

@@ -7,7 +7,9 @@ import {
   Outline,
   PageScript,
   StoryBrief,
+  dedupeByName,
   missingCharacters,
+  nameKey,
   scriptProblems,
   slugify,
   DEFAULT_AGE_BAND,
@@ -46,14 +48,16 @@ export class StoryWriter {
     this.storyteller = storyteller(ageBand);
   }
 
-  extractBrief(idea: string, answers: readonly QuestionAndAnswer[]): Promise<StoryBrief> {
-    return this.model.generate({
+  async extractBrief(idea: string, answers: readonly QuestionAndAnswer[]): Promise<StoryBrief> {
+    const brief = await this.model.generate({
       task: "extract_brief",
       schema: StoryBrief,
       system: `${this.storyteller}\n\n${EXTRACT_BRIEF}`,
       prompt: [block("child_idea", idea), block("answers", answers)].join("\n\n"),
       creative: false,
     });
+    // Safety net for speech-to-text spelling variants ("Skye" / "sky").
+    return { ...brief, characters: dedupeByName(brief.characters) };
   }
 
   decide(brief: StoryBrief, answers: readonly QuestionAndAnswer[]): Promise<ClarificationDecision> {
@@ -76,10 +80,12 @@ export class StoryWriter {
         creative: true,
       });
 
-    let { characters } = await request(undefined);
+    let characters = dedupeByName((await request(undefined)).characters);
     const missing = missingCharacters(brief.characters, characters);
     if (missing.length > 0) {
-      ({ characters } = await request(`You left out or renamed: ${missing.join(", ")}. Include them with exact names.`));
+      characters = dedupeByName(
+        (await request(`You left out or renamed: ${missing.join(", ")}. Include them with exact names.`)).characters,
+      );
     }
     // Ids must be unique and match names, whatever the model did.
     const seen = new Set<string>();
@@ -100,10 +106,10 @@ export class StoryWriter {
       prompt: [block("brief", brief), block("current_cast", cast), block("child_changes", feedback)].join("\n\n"),
       creative: false,
     });
-    const byName = new Map(cast.map((c) => [c.name.trim().toLowerCase(), c.id]));
+    const byName = new Map(cast.map((c) => [nameKey(c.name), c.id]));
     const seen = new Set<string>();
-    return characters.map((character) => {
-      let id = byName.get(character.name.trim().toLowerCase()) ?? (slugify(character.name) || "character");
+    return dedupeByName(characters).map((character) => {
+      let id = byName.get(nameKey(character.name)) ?? (slugify(character.name) || "character");
       while (seen.has(id)) id = `${id}-2`;
       seen.add(id);
       return { ...character, id };

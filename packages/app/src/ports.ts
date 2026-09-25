@@ -36,7 +36,16 @@ export interface VoiceDesigner {
 }
 
 export interface SpeechSynthesizer {
-  synthesize(request: { readonly text: string; readonly voiceId: string; readonly style: string }): Promise<{
+  /**
+   * `fallbackVoice` is a built-in voice (right gender) used when the designed `voiceId` can't be,
+   * e.g. once the voice-design-capable models are out of daily quota.
+   */
+  synthesize(request: {
+    readonly text: string;
+    readonly voiceId: string;
+    readonly fallbackVoice: string;
+    readonly style: string;
+  }): Promise<{
     readonly wav: Uint8Array;
     readonly durationMs: number;
   }>;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { childVoiceCues, missingCharacters, sanitizeVoiceDescription, scriptProblems, slugify } from "../src/invariants.ts";
+import { childVoiceCues, dedupeByName, missingCharacters, nameKey, sanitizeVoiceDescription, scriptProblems, slugify } from "../src/invariants.ts";
 import type { CharacterProfile, PageScript } from "../src/story.ts";
 
 const pip: CharacterProfile = {
@@ -43,6 +43,18 @@ describe("sanitizeVoiceDescription", () => {
   it("keeps the gender when removing boy/girl", () => {
     expect(sanitizeVoiceDescription("A cheeky boy's voice with a Welsh accent.")).toBe("A cheeky male voice with a Welsh accent.");
     expect(sanitizeVoiceDescription("A giggly little girl, very bouncy.")).toBe("A giggly female, very bouncy.");
+  });
+});
+
+describe("nameKey / dedupeByName", () => {
+  it("treats speech-to-text spelling variants as the same name", () => {
+    expect(nameKey("Skye")).toBe(nameKey("sky"));
+    expect(nameKey("Orla")).toBe(nameKey("Orlaa"));
+    expect(nameKey("Lily")).toBe(nameKey("Lillie"));
+    expect(nameKey("Thea")).not.toBe(nameKey("Theo"));
+  });
+  it("keeps the first of duplicate characters", () => {
+    expect(dedupeByName([{ name: "Skye" }, { name: "Orla" }, { name: "sky" }]).map((c) => c.name)).toEqual(["Skye", "Orla"]);
   });
 });
 

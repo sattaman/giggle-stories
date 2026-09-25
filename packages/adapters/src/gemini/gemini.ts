@@ -9,6 +9,26 @@ import { SAMPLE_RATE, durationMs, toPcm, toWav } from "./wav.ts";
 export const TTS_MODEL = "gemini-3.8-flash-tts";
 /** Separate daily quota, accepts the same designed voices (verified 2026-09-24). */
 export const TTS_FALLBACK_MODEL = "gemini-3.8-flash-lite-tts";
+/**
+ * Older TTS models, each with its own daily quota. They only take built-in voices and
+ * the generateContent API (verified 2026-09-25), so they're the last resort.
+ */
+export const LEGACY_TTS_MODELS = ["gemini-3.1-flash-tts-preview", "gemini-2.5-flash-preview-tts", "gemini-2.5-pro-preview-tts"] as const;
+
+const LegacyAudio = z.object({
+  candidates: z
+    .array(
+      z.object({
+        content: z.object({ parts: z.array(z.object({ inlineData: z.object({ data: z.string().min(1) }).optional() })) }),
+      }),
+    )
+    .min(1),
+});
+
+/** Legacy models read tags like <giggle> literally; drop them. */
+function withoutVocalTags(text: string): string {
+  return text.replace(/<[a-z -]+>/gi, "").replace(/\s{2,}/g, " ").trim();
+}
 export const TRANSCRIBE_MODEL = "gemini-3.5-transcribe";
 
 const AudioResult = z.object({ output_audio: z.object({ data: z.string().min(1) }) });
@@ -80,7 +100,12 @@ export class GeminiSpeech implements SpeechSynthesizer {
     private readonly models: readonly string[] = [TTS_MODEL, TTS_FALLBACK_MODEL],
   ) {}
 
-  async synthesize(request: { readonly text: string; readonly voiceId: string; readonly style: string }): Promise<{
+  async synthesize(request: {
+    readonly text: string;
+    readonly voiceId: string;
+    readonly fallbackVoice: string;
+    readonly style: string;
+  }): Promise<{
     readonly wav: Uint8Array;
     readonly durationMs: number;
   }> {
@@ -101,6 +126,36 @@ export class GeminiSpeech implements SpeechSynthesizer {
           ),
         );
         const pcm = toPcm(Buffer.from(AudioResult.parse(interaction).output_audio.data, "base64"));
+        return { wav: toWav(pcm), durationMs: durationMs(pcm) };
+      } catch (error: unknown) {
+        if (!isDailyQuota(error)) throw error;
+        const resetMs = retryDelayMs(apiError(error)?.message ?? "") ?? 60 * 60 * 1000;
+        this.exhaustedUntil.set(model, Date.now() + resetMs);
+        this.log.warn({ model, resetInMinutes: Math.round(resetMs / 60_000) }, "tts daily quota exhausted; trying fallback model");
+        lastError = error;
+      }
+    }
+    // Last resort: older models with a built-in voice of the right gender.
+    for (const model of LEGACY_TTS_MODELS) {
+      if ((this.exhaustedUntil.get(model) ?? 0) > Date.now()) continue;
+      try {
+        const spoken = withoutVocalTags(request.text);
+        const text = request.style.trim() === "" ? spoken : `Say in a ${request.style} way: ${spoken}`;
+        const response = await withRetry(`tts:${model}`, this.log, () =>
+          this.ai.models.generateContent({
+            model,
+            contents: [{ role: "user", parts: [{ text }] }],
+            config: {
+              responseModalities: ["AUDIO"],
+              speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: request.fallbackVoice } } },
+              httpOptions: { retryOptions: { attempts: 1 } },
+            },
+          }),
+        );
+        const data = LegacyAudio.parse(response).candidates[0]?.content.parts.find((p) => p.inlineData !== undefined)?.inlineData?.data;
+        if (data === undefined) throw new Error(`${model} returned no audio`);
+        const pcm = toPcm(Buffer.from(data, "base64"));
+        this.log.warn({ model, voice: request.fallbackVoice }, "tts via legacy model (built-in voice)");
         return { wav: toWav(pcm), durationMs: durationMs(pcm) };
       } catch (error: unknown) {
         if (!isDailyQuota(error)) throw error;
