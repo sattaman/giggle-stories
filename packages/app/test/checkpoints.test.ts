@@ -23,8 +23,8 @@ import { z } from "zod";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { compileStoryGraph } from "../src/graph/story-graph.ts";
 import type { SpeechSynthesizer } from "../src/ports.ts";
-import { SyntheticModel, syntheticDeps, syntheticStart } from "../dev/synthetic.ts";
-import { FakeVoices } from "./fakes.ts";
+import { SyntheticModel, syntheticDeps, syntheticStart } from "../testing/synthetic.ts";
+import { FakeVoices } from "../testing/fakes.ts";
 
 const Values = z.object({ outline: Outline.optional(), performance: z.array(PerformedSegment) });
 function countingSpeech(onCall: () => void): SpeechSynthesizer {

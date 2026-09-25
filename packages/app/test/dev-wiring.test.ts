@@ -3,7 +3,7 @@ import { Command, INTERRUPT, MemorySaver, isInterrupted } from "@langchain/langg
 import { describe, expect, it } from "vitest";
 import { buildStoryGraph } from "../src/graph/story-graph.ts";
 import { MERMAID_PATH, storyGraphMermaid } from "../dev/mermaid.ts";
-import { SyntheticModel, syntheticDeps, syntheticStart } from "../dev/synthetic.ts";
+import { SyntheticModel, syntheticDeps, syntheticStart } from "../testing/synthetic.ts";
 
 describe("development wiring", () => {
   it("keeps the committed Mermaid diagram in step with the graph", async () => {

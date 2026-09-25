@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { MemorySaver, type BaseCheckpointSaver } from "@langchain/langgraph";
 import { compileStoryGraph, type SpeechSynthesizer, type StructuredModel } from "@storytime/app";
-import { SyntheticModel, syntheticDeps } from "@storytime/app/synthetic";
+import { SyntheticModel, syntheticDeps } from "@storytime/app/testing";
 import type { StoryView } from "@storytime/domain";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { StoryIndex } from "../src/story-index.ts";

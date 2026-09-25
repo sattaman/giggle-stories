@@ -7,7 +7,7 @@ import { join } from "node:path";
 import { Command, INTERRUPT, isInterrupted } from "@langchain/langgraph";
 import { SqliteSaver } from "@langchain/langgraph-checkpoint-sqlite";
 import { compileStoryGraph } from "../src/graph/story-graph.ts";
-import { syntheticDeps, syntheticStart } from "./synthetic.ts";
+import { syntheticDeps, syntheticStart } from "../testing/synthetic.ts";
 
 /** Kept apart from the server's data/checkpoints.sqlite so synthetic runs never touch real stories. */
 export const DEV_DATA_DIR = join(import.meta.dirname, "..", "..", "..", "data", "dev");

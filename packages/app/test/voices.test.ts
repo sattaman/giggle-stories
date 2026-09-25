@@ -5,7 +5,7 @@ import { Command, MemorySaver, isInterrupted } from "@langchain/langgraph";
 import type { CharacterProfile } from "@storytime/domain";
 import { describe, expect, it } from "vitest";
 import { compileStoryGraph } from "../src/graph/story-graph.ts";
-import { FakeModel, FakeVoices, brief, cast, decisions, deps, outline, script } from "./fakes.ts";
+import { FakeModel, FakeVoices, brief, cast, decisions, deps, outline, script } from "../testing/fakes.ts";
 
 const [pip] = cast.characters;
 if (pip === undefined) throw new Error("fixture cast is empty");

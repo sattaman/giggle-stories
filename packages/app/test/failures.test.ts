@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { compileStoryGraph } from "../src/graph/story-graph.ts";
 import type { SpeechSynthesizer } from "../src/ports.ts";
 import { StoryWriter } from "../src/writer/story-writer.ts";
-import { FakeModel, brief, cast, decisions, deps, outline, script } from "./fakes.ts";
+import { FakeModel, brief, cast, decisions, deps, outline, script } from "../testing/fakes.ts";
 
 describe("story writer corrections", () => {
   it("asks again when the cast leaves out a character from the brief", async () => {

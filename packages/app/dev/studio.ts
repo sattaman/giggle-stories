@@ -5,6 +5,6 @@
 // aren't serialisable, so they are built in as defaults instead.
 
 import { buildStoryGraph } from "../src/graph/story-graph.ts";
-import { syntheticDeps } from "./synthetic.ts";
+import { syntheticDeps } from "../testing/synthetic.ts";
 
 export const graph = buildStoryGraph({ defaultDeps: syntheticDeps() }).compile({ name: "storytime" });

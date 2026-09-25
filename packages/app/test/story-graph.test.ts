@@ -1,7 +1,7 @@
 import { Command, INTERRUPT, MemorySaver, isInterrupted } from "@langchain/langgraph";
 import { describe, expect, it } from "vitest";
 import { compileStoryGraph } from "../src/graph/story-graph.ts";
-import { FakeModel, FakeVoices, RecordingProgress, brief, cast, decisions, deps, outline, script } from "./fakes.ts";
+import { FakeModel, FakeVoices, RecordingProgress, brief, cast, decisions, deps, outline, script } from "../testing/fakes.ts";
 
 const pipAsBoy = {
   characters: cast.characters.map((c) => ({ ...c, gender: "male", voiceArchetype: "kid-hero-male", voiceDescription: "A bright, bouncy cartoon hero's voice, male." })),
