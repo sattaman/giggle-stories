@@ -17,7 +17,7 @@ const models = {
   fast: process.env["STORY_MODEL_FAST"] ?? DEFAULT_MODELS.fast,
   creative: process.env["STORY_MODEL_CREATIVE"] ?? DEFAULT_MODELS.creative,
 };
-const writer = new StoryWriter(new OpenRouterStructuredModel(process.env["OPENROUTER_API_KEY"] ?? "", log, models));
+const writer = new StoryWriter(new OpenRouterStructuredModel(process.env["OPENROUTER_API_KEY"] ?? "", log, { models }));
 
 const idea = "a story about my hamster Biscuit who wants to be a famous chef but he's scared of spoons";
 const brief = await writer.extractBrief(idea, []);

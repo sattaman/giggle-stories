@@ -43,8 +43,10 @@ const speech = tracedSpeech(new GeminiSpeech(gemini, log));
 const transcriber = tracedTranscriber(new GeminiTranscriber(gemini, log));
 const audio = new FsAudioStore(join(config.DATA_DIR, "audio"), `${config.publicUrl}/v1/audio`);
 const model = new OpenRouterStructuredModel(config.OPENROUTER_API_KEY, log, {
-  fast: config.STORY_MODEL_FAST ?? DEFAULT_MODELS.fast,
-  creative: config.STORY_MODEL_CREATIVE ?? DEFAULT_MODELS.creative,
+  models: {
+    fast: config.STORY_MODEL_FAST ?? DEFAULT_MODELS.fast,
+    creative: config.STORY_MODEL_CREATIVE ?? DEFAULT_MODELS.creative,
+  },
 });
 
 const narratorVoiceId = await ensureNarratorVoice(voices, config.DATA_DIR, log);
