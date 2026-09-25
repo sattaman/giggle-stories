@@ -8,10 +8,16 @@
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json",
-    "typecheck:compat": "tsc6 -p tsconfig.json"
+    "typecheck:compat": "tsc6 -p tsconfig.json",
+    "graph:mermaid": "tsx dev/mermaid.ts",
+    "studio": "LANGSMITH_TRACING=false npx -y @langchain/langgraph-cli@1.5.1 dev --no-browser",
+    "synthetic": "tsx dev/run-synthetic.ts"
   },
   "devDependencies": {
-    "vitest": "^5.0.1"
+    "vitest": "^5.0.1",
+    "@langchain/langgraph-checkpoint-sqlite": "1.0.4",
+    "@types/better-sqlite3": "^9.6.0",
+    "tsx": "^4.23.15"
   },
   "dependencies": {
     "@langchain/core": "1.2.12",

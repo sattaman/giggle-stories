@@ -1,0 +1,5 @@
+{
+  "node_version": "22",
+  "graphs": { "storytime": "./dev/studio.ts:graph" },
+  "env": { "LANGSMITH_TRACING": "false" }
+}

@@ -59,7 +59,9 @@ export const StoryState = new StateSchema({
 });
 export type StoryStateValue = typeof StoryState.State;
 
-export const StoryContext = z.object({ deps: z.custom<StoryDeps>() });
+// Optional so hosts that own the run context (the Studio dev server sends only JSON) can
+// validate; buildStoryGraph({ defaultDeps }) supplies them there. depsOf checks at runtime.
+export const StoryContext = z.object({ deps: z.custom<StoryDeps>().optional() });
 type Ctx = z.infer<typeof StoryContext>;
 type Node = GraphNode<typeof StoryState, Ctx>;
 
@@ -362,20 +364,28 @@ const performPage: Node = async (state, config) => {
 
 // ── Wiring ──────────────────────────────────────────────────────────────────
 
-export function buildStoryGraph() {
+export interface BuildOptions {
+  /** Used when a run's context has no deps, e.g. the Studio dev server. Never set in production. */
+  readonly defaultDeps?: StoryDeps;
+}
+
+export function buildStoryGraph(options: BuildOptions = {}) {
+  const { defaultDeps } = options;
+  const node = (fn: Node): Node =>
+    defaultDeps === undefined ? fn : (state, config) => fn(state, { ...config, context: { deps: config.context?.deps ?? defaultDeps } });
   return new StateGraph(StoryState, StoryContext)
-    .addNode("understand", understand)
-    .addNode("askQuestion", askQuestion, { ends: ["understand"] })
-    .addNode("castCharacters", castCharacters)
-    .addNode("designVoices", designVoices)
-    .addNode("planOutline", planOutline)
-    .addNode("draftPage", draftPage)
-    .addNode("reviewOutline", reviewOutline, { ends: ["performPage", "reviseOutline"] })
-    .addNode("reviseOutline", reviseOutline)
-    .addNode("recast", recast)
+    .addNode("understand", node(understand))
+    .addNode("askQuestion", node(askQuestion), { ends: ["understand"] })
+    .addNode("castCharacters", node(castCharacters))
+    .addNode("designVoices", node(designVoices))
+    .addNode("planOutline", node(planOutline))
+    .addNode("draftPage", node(draftPage))
+    .addNode("reviewOutline", node(reviewOutline), { ends: ["performPage", "reviseOutline"] })
+    .addNode("reviseOutline", node(reviseOutline))
+    .addNode("recast", node(recast))
     // Same work as draftPage; a separate node because the join below fires only once.
-    .addNode("redraftPage", draftPage)
-    .addNode("performPage", performPage)
+    .addNode("redraftPage", node(draftPage))
+    .addNode("performPage", node(performPage))
     .addEdge(START, "understand")
     .addConditionalEdges("understand", (state) => (state.pendingQuestion === undefined ? "castCharacters" : "askQuestion"), [
       "castCharacters",
