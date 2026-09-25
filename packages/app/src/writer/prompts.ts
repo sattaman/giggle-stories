@@ -76,14 +76,22 @@ export const CAST = `Create the cast for this story.
 - hello: what they say to introduce themselves to the child when they first meet, in character and funny,
   under 15 words, pitched at the audience. E.g. "Hi! I'm Rolo, and I LOVE socks! <giggle>". Spoken verbatim.
 - voiceDescription: 1–2 sentences describing how the voice SOUNDS: pitch, timbre, pace, energy, accent,
-  attitude. It is sent to a voice-design system with strict rules:
-  NEVER mention age, childhood or youth (no "child", "kid", "girl", "boy", "young", "little", "tiny", "small",
-  "sweet", "squeaky", "teen", "11-year-old"), and never name real people.
-  For child characters, describe a cartoon voice instead.
-  GOOD: "A very high, soft, adorable animated-character voice, bouncy and excitable, with a British accent."
-  GOOD: "A booming, pompous, old-fashioned English aristocrat's voice, theatrical and easily offended."
-  GOOD: "A gravelly, grumbling, slow voice with a Scottish accent, secretly soft-hearted."
-  BAD (blocked): "A cheeky eleven-year-old girl." / "A tiny, sweet, squeaky voice."`;
+  attitude. It is sent to a voice-design system with strict rules, so follow ALL of these:
+  1. ALWAYS state the gender plainly and make it match the character's gender field: "a male voice",
+     "a female voice", "a male cartoon hero's voice", "a female cartoon heroine's voice". For "neutral",
+     describe a playful, non-gendered cartoon or creature voice.
+  2. NEVER mention age, childhood or youth. Banned words: child, kid, boy, girl, young, youthful, little,
+     tiny, small, sweet, squeaky, sing-song, teen, baby, toddler, any age like "11-year-old". Never name real people.
+  3. For child characters, describe a CARTOON voice ("animated-character", "cartoon hero/heroine"), since
+     the energy and pitch carry the youthfulness.
+  GOOD (female child character): "A very high, soft, adorable female animated-character voice, bouncy and excitable, with a British accent."
+  GOOD (male child character): "A bright, bouncy, energetic male cartoon hero's voice, cheeky and fast-talking, with a British accent."
+  GOOD (grown-up): "A booming, pompous, old-fashioned male English aristocrat's voice, theatrical and easily offended."
+  GOOD (creature): "A gravelly, grumbling, slow male voice with a Scottish accent, secretly soft-hearted."
+  BAD (blocked): "A cheeky eleven-year-old girl." / "A tiny, sweet, squeaky voice." / "A young boy's voice."
+- gender: "female" or "male" whenever the character has one (use the brief's gender for the child's characters).
+  Use "neutral" only for characters that genuinely have none (objects, robots, some creatures) or when the
+  child's character's gender is unknown.`;
 
 export const OUTLINE = `Write a 6-page outline (one beat per page) for a funny, sensible story:
 1. Meet the hero and what they want; a funny hook.
@@ -117,7 +125,10 @@ Each segment:
 export const REWRITE_VOICE = `A voice-design system rejected this voice description, most likely because it suggested a child's voice
 (words about age, childhood, being small or sweet are blocked). Rewrite it as 1–2 sentences that describe only
 how the voice sounds (pitch, timbre, pace, energy, accent, attitude), keeping the character's personality.
-For a child character, describe a cartoon voice. Never mention age, youth, size or real people.`;
+- State the gender plainly, matching the character's gender field ("a male voice", "a female cartoon heroine's voice").
+- For a child character, describe a cartoon voice ("a bright, bouncy male cartoon hero's voice").
+- Never use: child, kid, boy, girl, young, youthful, little, tiny, small, sweet, squeaky, sing-song, teen, baby,
+  toddler, any age, or real people's names.`;
 
 export function block(label: string, value: unknown): string {
   return `<${label}>\n${typeof value === "string" ? value : JSON.stringify(value, null, 2)}\n</${label}>`;

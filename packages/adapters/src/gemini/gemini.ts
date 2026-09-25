@@ -25,9 +25,10 @@ const ApiError = z.object({ status: z.number(), message: z.string().optional() }
 
 /** Ready-made voices used when a designed voice can't be created. */
 const CATALOG: Record<"female" | "male" | "neutral", readonly string[]> = {
-  female: ["Leda", "Aoede", "Zephyr", "Kore", "Laomedeia"],
+  female: ["Leda", "Aoede", "Kore", "Laomedeia", "Zephyr"],
   male: ["Puck", "Fenrir", "Orus", "Charon", "Enceladus"],
-  neutral: ["Zephyr", "Puck", "Aoede", "Fenrir"],
+  // Gender-unknown characters: bright, playful voices either way.
+  neutral: ["Zephyr", "Puck", "Leda", "Fenrir"],
 };
 
 export function createGemini(apiKey: string): GoogleGenAI {

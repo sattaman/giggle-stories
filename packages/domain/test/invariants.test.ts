@@ -39,6 +39,11 @@ describe("sanitizeVoiceDescription", () => {
     expect(cleaned).toContain("bright");
     expect(cleaned).toContain("Scottish accent");
   });
+
+  it("keeps the gender when removing boy/girl", () => {
+    expect(sanitizeVoiceDescription("A cheeky boy's voice with a Welsh accent.")).toBe("A cheeky male voice with a Welsh accent.");
+    expect(sanitizeVoiceDescription("A giggly little girl, very bouncy.")).toBe("A giggly female, very bouncy.");
+  });
 });
 
 describe("missingCharacters", () => {

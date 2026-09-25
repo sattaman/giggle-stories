@@ -48,7 +48,7 @@ while (view.pending?.kind === "clarification") {
 if (view.pending?.kind !== "outline_review") throw new Error("expected outline review");
 console.log(`  ${secs().padStart(6)}  📋 ${view.pending.outline.storyTitle}`);
 for (const p of view.pending.outline.pages) console.log(`          ${String(p.page)}. ${p.beat}`);
-for (const c of view.characters) console.log(`          ${c.emoji} ${c.name}: ${c.voice?.source ?? "no"} voice ${c.voice?.voiceId ?? ""} sample=${c.voice?.sampleUrl === null ? "no" : "yes"}`);
+for (const c of view.characters) console.log(`          ${c.emoji} ${c.name} [${c.gender}]: ${c.voice?.source ?? "no"} voice ${c.voice?.voiceId ?? ""} sample=${c.voice?.sampleUrl === null ? "no" : "yes"}\n             “${c.hello}”\n             voice: ${c.voiceDescription}`);
 
 view = await call(`/v1/stories/${view.id}/replies`, { kind: "outline", approved: true });
 const approvedAt = performance.now();

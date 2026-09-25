@@ -29,6 +29,9 @@ export function childVoiceCues(description: string): string[] {
  */
 export function sanitizeVoiceDescription(description: string): string {
   return description
+    // Keep the gender when removing child wording: "a cheeky boy's voice" → "a cheeky male voice".
+    .replace(/\b(boy|son|lad)(?:'s|s)?\b/gi, "male")
+    .replace(/\b(girl|daughter|lass)(?:'s|s)?\b/gi, "female")
     .replace(new RegExp(CHILD_VOICE_CUES, "gi"), "")
     .replace(/\b(a|an)\s+(?=[,.;]|and\b|with\b|$)/gi, "")
     .replace(/\s*,\s*(,\s*)+/g, ", ")

@@ -167,6 +167,7 @@ export class StoryWriter {
       system: REWRITE_VOICE,
       prompt: block("character", {
         name: character.name,
+        gender: character.gender,
         personality: character.personality,
         comicTrait: character.comicTrait,
         rejected: character.voiceDescription,
