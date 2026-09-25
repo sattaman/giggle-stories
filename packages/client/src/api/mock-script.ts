@@ -22,6 +22,7 @@ export const MOCK_CHARACTERS: readonly Character[] = [
     catchphrase: "Quack the sails!",
     hello: "Ahoy! I'm Captain Crumbs, and I'm NOT scared of anything! Except cheese.",
     gender: "male",
+    voiceArchetype: "villain-male",
     voiceDescription: "A booming, gravelly pirate voice with a surprising little quack at the end of sentences.",
   },
   {
@@ -34,6 +35,7 @@ export const MOCK_CHARACTERS: readonly Character[] = [
     comicTrait: "Speaks in rhymes when she gets nervous.",
     hello: "Hello, dear! I'm Mrs Pickle. Someone has to keep the captain out of trouble.",
     gender: "female",
+    voiceArchetype: "animal-female",
     voiceDescription: "A crisp, posh, slightly croaky voice that speeds up into sing-song rhymes when flustered.",
   },
 ];

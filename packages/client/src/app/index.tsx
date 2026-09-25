@@ -25,6 +25,9 @@ export default function HomeScreen() {
         <BigButton size="huge" label="Make a story ✨" onPress={() => {
           router.push("/new");
         }} />
+        <BigButton variant="soft" label="📚 My stories" onPress={() => {
+          router.push("/stories");
+        }} />
       </View>
     </Screen>
   );

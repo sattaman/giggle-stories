@@ -2,7 +2,16 @@
 // Timers walk each story through the same states the real server produces:
 // working stages → one clarification → outline review → a progressive performance.
 
-import { NarrationClips, NarrationKey, StoryView, type PerformedSegment, type ReplyBody } from "@storytime/domain";
+import {
+  DEFAULT_AGE_BAND,
+  NarrationClips,
+  NarrationKey,
+  StorySummary,
+  StoryView,
+  type AgeBand,
+  type PerformedSegment,
+  type ReplyBody,
+} from "@storytime/domain";
 import { ApiError, SILENT_AUDIO_PREFIX, silentUrl, type StoryApi } from "./story-api.ts";
 import { MOCK_CHARACTERS, MOCK_NARRATION_MS, MOCK_OUTLINE, MOCK_QUESTION, MOCK_SEGMENTS, MOCK_TRANSCRIPTS } from "./mock-script.ts";
 
@@ -15,9 +24,23 @@ interface Step {
   readonly apply: (view: StoryView) => StoryView;
 }
 
+interface StoryMeta {
+  readonly createdAt: string;
+  readonly ageBand: AgeBand;
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 export function createMockStoryApi(): StoryApi {
   const stories = new Map<string, StoryView>();
+  const meta = new Map<string, StoryMeta>();
   let nextId = 1;
+
+  // A few earlier stories, so "My stories" has something in it.
+  for (const seed of seedStories()) {
+    stories.set(seed.view.id, StoryView.parse(seed.view));
+    meta.set(seed.view.id, { createdAt: new Date(Date.now() - seed.daysAgo * DAY_MS).toISOString(), ageBand: seed.ageBand });
+  }
   let transcriptions = 0;
 
   function update(id: string, change: (view: StoryView) => StoryView): void {
@@ -50,10 +73,11 @@ export function createMockStoryApi(): StoryApi {
       return text;
     },
 
-    async start(idea: string): Promise<StoryView> {
+    async start(idea: string, ageBand: AgeBand): Promise<StoryView> {
       await delay(LATENCY_MS);
       const id = `story_mock${String(nextId)}`;
       nextId += 1;
+      meta.set(id, { createdAt: new Date().toISOString(), ageBand });
       stories.set(id, working({ ...emptyView(id), idea }, "understanding", "Reading your brilliant idea…"));
       schedule(id, [
         { afterMs: STEP_MS, apply: (v) => working(v, "understanding", "Thinking of a question…") },
@@ -95,12 +119,85 @@ export function createMockStoryApi(): StoryApi {
       return snapshot(id);
     },
 
+    async listStories(): Promise<StorySummary[]> {
+      await delay(LATENCY_MS);
+      return [...stories.values()]
+        .map((view) => summaryOf(view, meta.get(view.id) ?? { createdAt: new Date(0).toISOString(), ageBand: DEFAULT_AGE_BAND }))
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    },
+
     async narration(): Promise<NarrationClips> {
       await delay(LATENCY_MS);
       const clips = Object.fromEntries(NarrationKey.options.map((key) => [key, silentUrl(`narration-${key}`, MOCK_NARRATION_MS[key])]));
       return NarrationClips.parse({ clips });
     },
   };
+}
+
+function summaryOf(view: StoryView, { createdAt, ageBand }: StoryMeta): StorySummary {
+  const segments = view.performance?.segments ?? [];
+  return StorySummary.parse({
+    id: view.id,
+    title: view.title,
+    idea: view.idea ?? "",
+    ageBand,
+    createdAt,
+    status: view.status,
+    characters: view.characters.map(({ name, emoji, colour }) => ({ name, emoji, colour })),
+    voicedLines: segments.filter((s) => s.audioUrl !== null).length,
+    totalLines: segments.length,
+  });
+}
+
+interface Seed {
+  readonly view: StoryView;
+  readonly daysAgo: number;
+  readonly ageBand: AgeBand;
+}
+
+function seedStories(): Seed[] {
+  const characters = MOCK_CHARACTERS.map((c) => ({
+    ...c,
+    voice: { voiceId: `mock-${c.id}`, source: "library" as const, sampleUrl: silentUrl(`hello-${c.id}`, estimateDurationMs(c.hello)) },
+  }));
+  const segments: PerformedSegment[] = MOCK_SEGMENTS.map((segment, index) => ({
+    index,
+    ...segment,
+    audioUrl: `${SILENT_AUDIO_PREFIX}${String(index)}`,
+    durationMs: estimateDurationMs(segment.text),
+  }));
+  const base = emptyView("story_demo_done");
+  return [
+    {
+      daysAgo: 1,
+      ageBand: "5-8",
+      view: {
+        ...base,
+        status: "done",
+        idea: "A duck who is a pirate and is scared of cheese",
+        characters,
+        title: MOCK_OUTLINE.storyTitle,
+        performance: { page: 1, segments, complete: true },
+      },
+    },
+    {
+      daysAgo: 3,
+      ageBand: "9-12",
+      view: {
+        ...emptyView("story_demo_waiting"),
+        status: "waiting",
+        idea: "A frog who wants to be a ballerina",
+        characters: characters.slice(1),
+        title: "Mrs Pickle Dances the Swan Lake Splash",
+        pending: { kind: "outline_review", outline: { ...MOCK_OUTLINE, storyTitle: "Mrs Pickle Dances the Swan Lake Splash" } },
+      },
+    },
+    {
+      daysAgo: 4,
+      ageBand: "0-4",
+      view: { ...emptyView("story_demo_error"), status: "error", idea: "A broken one", error: "Mock failure" },
+    },
+  ];
 }
 
 function castingSteps(): Step[] {

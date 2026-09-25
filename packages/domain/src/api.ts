@@ -66,10 +66,10 @@ export const StartStoryBody = z.object({
 });
 export type StartStoryBody = z.input<typeof StartStoryBody>;
 
-const AnswerReply = z.object({ kind: z.literal("answer"), text: z.string().min(1).max(1000) });
+const AnswerReply = z.object({ kind: z.literal("answer"), text: z.string().min(1).max(2000) });
 const OutlineReply = z.discriminatedUnion("approved", [
   z.object({ kind: z.literal("outline"), approved: z.literal(true) }),
-  z.object({ kind: z.literal("outline"), approved: z.literal(false), feedback: z.string().min(1).max(1000) }),
+  z.object({ kind: z.literal("outline"), approved: z.literal(false), feedback: z.string().min(1).max(2000) }),
 ]);
 export const ReplyBody = z.union([AnswerReply, OutlineReply]);
 export type ReplyBody = z.infer<typeof ReplyBody>;

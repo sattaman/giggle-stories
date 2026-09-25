@@ -1,4 +1,4 @@
-import { DEFAULT_AGE_BAND, type AgeBand } from "@storytime/domain";
+import { DEFAULT_AGE_BAND, StartStoryBody, type AgeBand } from "@storytime/domain";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
@@ -9,6 +9,9 @@ import { NarrationLine } from "../components/narration-line.tsx";
 import { Screen } from "../components/screen.tsx";
 import { SpeechInput } from "../components/speech-input.tsx";
 import { text } from "../components/text-styles.ts";
+
+/** A long, rambling idea is fine: allow everything the server accepts. */
+const IDEA_MAX_LENGTH = StartStoryBody.shape.idea.maxLength ?? 2000;
 
 export default function IdeaScreen() {
   const api = useStoryApi();
@@ -36,7 +39,7 @@ export default function IdeaScreen() {
         <Text style={text.body}>Who's in it? Where are they? What silly thing happens?</Text>
       </View>
       <AgePicker value={ageBand} onChange={setAgeBand} />
-      <SpeechInput submitLabel="Yes, go!" placeholder="A dragon who is scared of sandwiches…" onSubmit={startStory} />
+      <SpeechInput submitLabel="Yes, go!" placeholder="A dragon who is scared of sandwiches…" onSubmit={startStory} maxLength={IDEA_MAX_LENGTH} />
     </Screen>
   );
 }

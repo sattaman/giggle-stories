@@ -27,8 +27,8 @@ export interface OutlineReviewProps {
 }
 
 /**
- * "Here's my plan!": the cast says hello one by one (the voice introductions),
- * then the six beats, for a thumbs up or a change.
+ * "Here's my plan!": the title and the big Yes / Change buttons up top, then the
+ * cast (who say hello one by one: the voice introductions) and six short beats.
  */
 export function OutlineReview({ outline, characters, autoIntro, onIntroStarted, onApprove, onChange }: OutlineReviewProps) {
   const narration = useNarration();
@@ -78,16 +78,51 @@ export function OutlineReview({ outline, characters, autoIntro, onIntroStarted, 
     setFailed(!ok);
   }
 
+  const actions = changing ? (
+    <View style={styles.change}>
+      <Text style={text.heading}>What should I change?</Text>
+      <SpeechInput submitLabel="Change it!" placeholder="e.g. Make the frog a pirate too" onSubmit={onChange} />
+      <BigButton
+        variant="ghost"
+        size="small"
+        label="Never mind, it's perfect"
+        onPress={() => {
+          setChanging(false);
+        }}
+        style={styles.center}
+      />
+    </View>
+  ) : (
+    <View style={styles.actions}>
+      {failed && <Text style={[text.problem, styles.fullRow]}>Oops, that didn't send. Try again!</Text>}
+      <BigButton variant="go" size="huge" label={approving ? "Here we go…" : "Yes! Make it! 🎉"} disabled={approving} onPress={() => void approve()} />
+      <BigButton
+        variant="soft"
+        label="✏️ Change something"
+        disabled={approving}
+        onPress={() => {
+          stop();
+          setChanging(true);
+        }}
+      />
+    </View>
+  );
+
+  // The buttons come first, right under the title: children look for them at the top, not after scrolling.
   return (
     <View style={styles.stack}>
-      <Text style={text.body}>Here's my plan for…</Text>
-      <Text style={text.title}>{outline.storyTitle}</Text>
+      <View style={styles.header}>
+        <Text style={text.body}>Here's my plan for…</Text>
+        <Text style={styles.title}>{outline.storyTitle}</Text>
+      </View>
+
+      {actions}
 
       {characters.length > 0 && (
         <View style={styles.cast}>
-          <Text style={text.heading}>Meet the characters!</Text>
           <CastRow
             cast={cast}
+            compact
             speakingId={speaker === undefined ? null : speaker.id}
             onHearVoice={(member) => {
               const character = characters.find((c) => c.id === member.id);
@@ -103,16 +138,14 @@ export function OutlineReview({ outline, characters, autoIntro, onIntroStarted, 
           )}
           {hasIntro && !introStarted && (
             <Bouncy height={10}>
-              <BigButton variant="go" size="huge" label="▶ Meet your characters!" onPress={playIntro} style={styles.center} />
+              <BigButton variant="primary" size="huge" label="▶ Meet your characters!" onPress={playIntro} style={styles.center} />
             </Bouncy>
           )}
           {hasIntro && introStarted && !introPlaying && (
-            <BigButton variant="soft" label="▶ Hear everyone again" onPress={playIntro} style={styles.center} />
+            <BigButton variant="soft" size="small" label="▶ Hear everyone again" onPress={playIntro} style={styles.center} />
           )}
         </View>
       )}
-
-      <Text style={text.heading}>The plan</Text>
 
       <View style={styles.beats}>
         {outline.pages.map((page, i) => (
@@ -120,66 +153,28 @@ export function OutlineReview({ outline, characters, autoIntro, onIntroStarted, 
             <View style={[styles.number, { backgroundColor: BEAT_COLOURS[i % BEAT_COLOURS.length] }]}>
               <Text style={styles.numberText}>{page.page}</Text>
             </View>
-            <View style={styles.beatText}>
-              <Text style={styles.beatLine}>{page.beat}</Text>
-              {page.funnyMoment !== "" && <Text style={styles.funny}>😂 {page.funnyMoment}</Text>}
-            </View>
+            <Text style={styles.beatLine} numberOfLines={2}>
+              {page.beat}
+            </Text>
           </View>
         ))}
       </View>
-
-      {changing ? (
-        <View style={styles.change}>
-          <Text style={text.heading}>What should I change?</Text>
-          <SpeechInput submitLabel="Change it!" placeholder="e.g. Make the frog a pirate too" onSubmit={onChange} />
-          <BigButton
-            variant="ghost"
-            size="small"
-            label="Never mind, it's perfect"
-            onPress={() => {
-              setChanging(false);
-            }}
-            style={styles.center}
-          />
-        </View>
-      ) : (
-        <View style={styles.buttons}>
-          {failed && <Text style={text.problem}>Oops, that didn't send. Try again!</Text>}
-          <BigButton variant="go" size="huge" label={approving ? "Here we go…" : "Yes! Make it! 🎉"} disabled={approving} onPress={() => void approve()} />
-          <BigButton
-            variant="soft"
-            label="✏️ Change something"
-            disabled={approving}
-            onPress={() => {
-              stop();
-              setChanging(true);
-            }}
-          />
-        </View>
-      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   stack: { gap: 20 },
-  cast: { gap: 16 },
-  beats: { gap: 14 },
-  beat: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-    backgroundColor: colours.card,
-    borderRadius: radius.card,
-    padding: 18,
-    ...cardShadow,
-  },
-  number: { width: 56, height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center" },
-  numberText: { fontFamily: fonts.heading, fontSize: 28, fontWeight: "900", color: "#FFFFFF" },
-  beatText: { flex: 1, gap: 6 },
-  beatLine: { fontFamily: fonts.body, fontSize: 22, lineHeight: 30, fontWeight: "700", color: colours.ink },
-  funny: { fontFamily: fonts.body, fontSize: 17, lineHeight: 24, fontStyle: "italic", color: colours.inkSoft },
-  change: { gap: 16, marginTop: 8 },
-  buttons: { alignItems: "center", gap: 16, marginTop: 8 },
+  header: { gap: 4 },
+  title: { fontFamily: fonts.heading, fontSize: 38, lineHeight: 46, fontWeight: "900", color: colours.ink, textAlign: "center" },
+  actions: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", alignItems: "center", gap: 16 },
+  fullRow: { width: "100%" },
+  cast: { gap: 12 },
+  beats: { gap: 8, backgroundColor: colours.card, borderRadius: radius.card, padding: 16, ...cardShadow },
+  beat: { flexDirection: "row", alignItems: "center", gap: 14 },
+  number: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
+  numberText: { fontFamily: fonts.heading, fontSize: 19, fontWeight: "900", color: "#FFFFFF" },
+  beatLine: { flex: 1, fontFamily: fonts.body, fontSize: 19, lineHeight: 26, fontWeight: "600", color: colours.ink },
+  change: { gap: 16 },
   center: { alignSelf: "center" },
 });

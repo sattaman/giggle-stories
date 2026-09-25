@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { StyleSheet, Text, TextInput, View } from "react-native";
 import { useStoryApi } from "../api/api-context.tsx";
-import { formatElapsed } from "../speech/speech-machine.ts";
+import { ANSWER_BOX_MIN_HEIGHT, answerBoxHeight, formatElapsed } from "../speech/speech-machine.ts";
 import { useSpeechInput } from "../speech/use-speech-input.ts";
 import { useNarration } from "../story/narration.tsx";
 import { BigButton } from "./big-button.tsx";
@@ -10,7 +10,11 @@ import { text } from "./text-styles.ts";
 import { colours, fonts, radius } from "./theme.ts";
 import { WaitingCard } from "./waiting-card.tsx";
 
-const MAX_LENGTH = 1000;
+/** The server's limit for answers and outline changes (ReplyBody). */
+// Matches the server limits for answers and change requests (ReplyBody).
+const DEFAULT_MAX_LENGTH = 2000;
+/** Border width of the answer box: its content size doesn't include it. */
+const BOX_BORDER = 4;
 
 export interface SpeechInputProps {
   readonly submitLabel: string;
@@ -19,14 +23,17 @@ export interface SpeechInputProps {
   readonly onSubmit: (text: string) => Promise<boolean>;
   /** Called just before the mic opens, e.g. to hush any clip that's playing. */
   readonly onListen?: () => void;
+  /** Longest text the server accepts here. */
+  readonly maxLength?: number;
 }
 
 /** Say it (tap the mic) or type it, check it, send it. */
-export function SpeechInput({ submitLabel, placeholder, onSubmit, onListen }: SpeechInputProps) {
+export function SpeechInput({ submitLabel, placeholder, onSubmit, onListen, maxLength = DEFAULT_MAX_LENGTH }: SpeechInputProps) {
   const speech = useSpeechInput(useStoryApi());
   const narration = useNarration();
   const [sending, setSending] = useState(false);
   const [sendFailed, setSendFailed] = useState(false);
+  const [boxHeight, setBoxHeight] = useState(ANSWER_BOX_MIN_HEIGHT);
   const { state } = speech;
 
   function listen(): void {
@@ -40,7 +47,7 @@ export function SpeechInput({ submitLabel, placeholder, onSubmit, onListen }: Sp
     if (trimmed === "" || sending) return;
     setSending(true);
     setSendFailed(false);
-    const ok = await onSubmit(trimmed.slice(0, MAX_LENGTH));
+    const ok = await onSubmit(trimmed.slice(0, maxLength));
     setSending(false);
     setSendFailed(!ok);
   }
@@ -60,8 +67,11 @@ export function SpeechInput({ submitLabel, placeholder, onSubmit, onListen }: Sp
             placeholderTextColor={colours.inkSoft}
             multiline
             autoFocus={state.source === "typed"}
-            maxLength={MAX_LENGTH}
-            style={styles.input}
+            maxLength={maxLength}
+            onContentSizeChange={(event) => {
+              setBoxHeight(answerBoxHeight(event.nativeEvent.contentSize.height + 2 * BOX_BORDER));
+            }}
+            style={[styles.input, { height: boxHeight }]}
             accessibilityLabel="Your words"
           />
           {sendFailed && <Text style={text.problem}>Oops, that didn't send. Try again!</Text>}
@@ -113,7 +123,7 @@ const styles = StyleSheet.create({
     minHeight: 140,
     backgroundColor: colours.card,
     borderRadius: radius.card,
-    borderWidth: 4,
+    borderWidth: BOX_BORDER,
     borderColor: colours.softDark,
     padding: 20,
     fontFamily: fonts.body,

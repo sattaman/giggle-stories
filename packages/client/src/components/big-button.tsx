@@ -17,15 +17,17 @@ export interface BigButtonProps {
   readonly size?: "normal" | "huge" | "small";
   readonly disabled?: boolean;
   readonly style?: StyleProp<ViewStyle>;
+  /** What a screen reader says, when the label alone is ambiguous (e.g. many "▶ Play" buttons). */
+  readonly accessibilityLabel?: string;
 }
 
 /** A chunky, squishy button with a big touch target. */
-export function BigButton({ label, onPress, variant = "primary", size = "normal", disabled = false, style }: BigButtonProps) {
+export function BigButton({ label, onPress, variant = "primary", size = "normal", disabled = false, style, accessibilityLabel }: BigButtonProps) {
   const look = VARIANTS[variant];
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={label}
+      accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={onPress}

@@ -12,12 +12,14 @@ export interface CharacterCardProps {
   /** Dim everyone who isn't speaking. */
   readonly dimmed?: boolean;
   readonly compact?: boolean;
+  /** Show the comic trait even when compact (e.g. while this character says hello). */
+  readonly showTrait?: boolean;
   /** Offer "Hear my voice" (only when the member has a sample). */
   readonly onHearVoice?: () => void;
   readonly voicePlaying?: boolean;
 }
 
-export function CharacterCard({ member, speaking = false, dimmed = false, compact = false, onHearVoice, voicePlaying = false }: CharacterCardProps) {
+export function CharacterCard({ member, speaking = false, dimmed = false, compact = false, showTrait = false, onHearVoice, voicePlaying = false }: CharacterCardProps) {
   const scale = useSharedValue(1);
   useEffect(() => {
     scale.set(withSpring(speaking ? 1.1 : 1, { damping: 9, stiffness: 180 }));
@@ -41,15 +43,15 @@ export function CharacterCard({ member, speaking = false, dimmed = false, compac
       <Text style={[styles.name, compact && styles.compactName]} numberOfLines={2}>
         {member.name}
       </Text>
-      {!compact && member.trait !== null && <Text style={styles.trait}>{member.trait}</Text>}
+      {(!compact || showTrait) && member.trait !== null && <Text style={[styles.trait, compact && styles.compactTrait]}>{member.trait}</Text>}
       {onHearVoice !== undefined && member.sampleUrl !== null && (
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`Hear ${member.name}'s voice`}
           onPress={onHearVoice}
-          style={({ pressed }) => [styles.voice, { backgroundColor: member.colour, opacity: pressed ? 0.8 : 1 }]}
+          style={({ pressed }) => [styles.voice, compact && styles.compactVoice, { backgroundColor: member.colour, opacity: pressed ? 0.8 : 1 }]}
         >
-          <Text style={styles.voiceLabel}>{voicePlaying ? "🔊 Listening…" : "▶ Hear my voice"}</Text>
+          <Text style={[styles.voiceLabel, compact && styles.compactVoiceLabel]}>{voicePlaying ? "🔊 Listening…" : "▶ Hear my voice"}</Text>
         </Pressable>
       )}
     </Animated.View>
@@ -67,7 +69,7 @@ const styles = StyleSheet.create({
     gap: 8,
     ...cardShadow,
   },
-  compact: { width: 136, padding: 10, gap: 4 },
+  compact: { width: 176, padding: 10, gap: 4 },
   avatar: { width: 88, height: 88, borderRadius: 44, alignItems: "center", justifyContent: "center" },
   compactAvatar: { width: 68, height: 68, borderRadius: 34 },
   emoji: { fontSize: 48, lineHeight: 58 },
@@ -75,6 +77,7 @@ const styles = StyleSheet.create({
   name: { fontFamily: fonts.heading, fontSize: 22, fontWeight: "800", color: colours.ink, textAlign: "center" },
   compactName: { fontSize: 17 },
   trait: { fontFamily: fonts.body, fontSize: 16, color: colours.inkSoft, textAlign: "center" },
+  compactTrait: { fontSize: 14 },
   voice: {
     marginTop: 4,
     minHeight: TOUCH,
@@ -85,5 +88,7 @@ const styles = StyleSheet.create({
     alignSelf: "stretch",
     cursor: "pointer",
   },
+  compactVoice: { paddingHorizontal: 8 },
+  compactVoiceLabel: { fontSize: 15 },
   voiceLabel: { fontFamily: fonts.heading, fontSize: 17, fontWeight: "800", color: "#FFFFFF", textAlign: "center" },
 });

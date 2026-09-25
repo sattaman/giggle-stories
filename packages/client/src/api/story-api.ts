@@ -1,7 +1,7 @@
 // Driven port: everything the child UI needs from the Storytime server.
 // Implemented over HTTP (http-story-api.ts) and in memory (mock-story-api.ts).
 
-import type { AgeBand, NarrationClips, ReplyBody, StoryView } from "@storytime/domain";
+import type { AgeBand, NarrationClips, ReplyBody, StorySummary, StoryView } from "@storytime/domain";
 
 /** A finished recording, in the shape each platform's FormData understands. */
 export type AudioUpload =
@@ -16,6 +16,8 @@ export interface StoryApi {
   reply(id: string, body: ReplyBody): Promise<StoryView>;
   /** The narrator's fixed guide lines. Callers treat a failure as "no narration". */
   narration(): Promise<NarrationClips>;
+  /** Every story made so far, most recent first. */
+  listStories(): Promise<StorySummary[]>;
 }
 
 export class ApiError extends Error {

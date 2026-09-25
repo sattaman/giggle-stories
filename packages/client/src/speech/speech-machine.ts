@@ -57,3 +57,12 @@ export function formatElapsed(ms: number): string {
   const seconds = Math.max(0, Math.floor(ms / 1000));
   return `${String(Math.floor(seconds / 60))}:${String(seconds % 60).padStart(2, "0")}`;
 }
+
+/** The "Did I hear you right?" box grows with the transcript, so a long idea is never hidden below its fold. */
+export const ANSWER_BOX_MIN_HEIGHT = 140;
+export const ANSWER_BOX_MAX_HEIGHT = 600;
+
+export function answerBoxHeight(contentHeight: number): number {
+  if (!Number.isFinite(contentHeight)) return ANSWER_BOX_MIN_HEIGHT;
+  return Math.min(ANSWER_BOX_MAX_HEIGHT, Math.max(ANSWER_BOX_MIN_HEIGHT, Math.ceil(contentHeight)));
+}

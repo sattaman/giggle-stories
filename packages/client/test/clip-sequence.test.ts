@@ -87,6 +87,7 @@ describe("voice introductions", () => {
     comicTrait: "",
     hello: `Hi, I'm ${id}!`,
     gender: "neutral",
+    voiceArchetype: "creature-neutral",
     voiceDescription: "A booming, gravelly pirate voice with a quack.",
     voice: { voiceId: id, source: "designed", sampleUrl },
   });

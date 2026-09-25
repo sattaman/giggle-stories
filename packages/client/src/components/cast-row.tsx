@@ -19,6 +19,7 @@ export function CastRow({ cast, speakingId = null, compact = false, onHearVoice 
           member={member}
           compact={compact}
           speaking={member.id === speakingId}
+          showTrait={onHearVoice !== undefined && member.id === speakingId}
           dimmed={speakingId !== null}
           voicePlaying={member.id === speakingId}
           {...(onHearVoice === undefined
@@ -35,5 +36,5 @@ export function CastRow({ cast, speakingId = null, compact = false, onHearVoice 
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 16, paddingVertical: 8 },
+  row: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", alignItems: "flex-start", gap: 16, paddingVertical: 8 },
 });
