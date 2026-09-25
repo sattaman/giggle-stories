@@ -19,7 +19,10 @@ const LegacyAudio = z.object({
   candidates: z
     .array(
       z.object({
-        content: z.object({ parts: z.array(z.object({ inlineData: z.object({ data: z.string().min(1) }).optional() })) }),
+        // Occasionally a candidate comes back with no parts (no audio): try the next model.
+        content: z
+          .object({ parts: z.array(z.object({ inlineData: z.object({ data: z.string().min(1) }).optional() })).optional() })
+          .optional(),
       }),
     )
     .min(1),
@@ -152,8 +155,13 @@ export class GeminiSpeech implements SpeechSynthesizer {
             },
           }),
         );
-        const data = LegacyAudio.parse(response).candidates[0]?.content.parts.find((p) => p.inlineData !== undefined)?.inlineData?.data;
-        if (data === undefined) throw new Error(`${model} returned no audio`);
+        const data = LegacyAudio.parse(response).candidates[0]?.content?.parts?.find((p) => p.inlineData !== undefined)
+          ?.inlineData?.data;
+        if (data === undefined) {
+          this.log.warn({ model }, "legacy tts returned no audio; trying next model");
+          lastError = new Error(`${model} returned no audio`);
+          continue;
+        }
         const pcm = toPcm(Buffer.from(data, "base64"));
         this.log.warn({ model, voice: request.fallbackVoice }, "tts via legacy model (built-in voice)");
         return { wav: toWav(pcm), durationMs: durationMs(pcm) };

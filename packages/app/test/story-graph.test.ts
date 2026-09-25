@@ -59,8 +59,19 @@ describe("story graph", () => {
     expect(model.calls.at(-1)).toBe("write_page");
   });
 
-  it("never asks more than two questions", async () => {
+  it("never asks the same question twice", async () => {
     const { graph, config, model } = setup({ decide: [decisions.ask] });
+    await graph.invoke(start, config);
+    const next = await graph.invoke(new Command({ resume: "I don't know" }), config);
+    if (!isInterrupted(next)) throw new Error("expected outline review");
+    expect(next[INTERRUPT][0]?.value).toMatchObject({ kind: "outline_review" });
+    expect(model.calls.filter((t) => t === "decide_clarification")).toHaveLength(2);
+  });
+
+  it("never asks more than two questions", async () => {
+    const other = { decision: "ask", reason: "x", question: "Does the rocket have a name?" };
+    const third = { decision: "ask", reason: "x", question: "Where does Pip live?" };
+    const { graph, config, model } = setup({ decide: [decisions.ask, other, third] });
     await graph.invoke(start, config);
     await graph.invoke(new Command({ resume: "one" }), config);
     const afterSecond = await graph.invoke(new Command({ resume: "two" }), config);

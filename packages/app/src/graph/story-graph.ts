@@ -74,6 +74,16 @@ function depsOf(config: { readonly context?: Ctx | undefined }): StoryDeps {
   return deps;
 }
 
+/** Word-overlap similarity: stops the same question being asked twice. */
+function similar(a: string, b: string): boolean {
+  const words = (text: string) => new Set(text.toLowerCase().match(/[a-z']{3,}/g) ?? []);
+  const x = words(a);
+  const y = words(b);
+  if (x.size === 0 || y.size === 0) return false;
+  const shared = [...x].filter((w) => y.has(w)).length;
+  return shared / Math.min(x.size, y.size) >= 0.6;
+}
+
 /** Built-in voice for the narrator when designed voices can't be used. */
 function narratorFallback(deps: StoryDeps): string {
   return deps.voices.fallback("male", 3);
@@ -96,7 +106,11 @@ const understand: Node = async (state, config) => {
 
   const decision = await writer.decide(brief, state.answers);
   deps.log.info({ storyId: state.storyId, decision: decision.decision, reason: decision.reason }, "clarification decision");
-  if (decision.decision === "ready" || decision.question.trim() === "") return { brief, pendingQuestion: undefined };
+  const repeated = state.answers.some((qa) => similar(qa.question, decision.question));
+  if (decision.decision === "ready" || decision.question.trim() === "" || repeated) {
+    if (repeated) deps.log.info({ storyId: state.storyId, question: decision.question }, "skipping repeated question");
+    return { brief, pendingQuestion: undefined };
+  }
 
   // Voice the question before pausing (side effects never live in interrupt nodes).
   let audioUrl: string | null = null;

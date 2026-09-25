@@ -61,6 +61,8 @@ Ask when something important is missing, in this priority order:
 3. A character the child named has no description at all: ask what they look like or what they are like, so the
    story feels personal. E.g. "What does Rolo look like? Fluffy, spotty, tiny, enormous?"
 Don't ask about invented extra characters, and don't ask about things already answered.
+NEVER repeat a question from already_asked, even reworded. If the child's answer didn't cover it, that's fine:
+decide "ready" and invent the missing detail sensibly (a neutral choice for an unknown gender).
 Otherwise answer "ready": you can invent the rest brilliantly yourself. Don't ask about small details,
 names of extra characters, or anything you can make up. Never ask more than needed.
 
