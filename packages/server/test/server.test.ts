@@ -48,6 +48,16 @@ describe("buildView", () => {
     expect(done.performance?.complete).toBe(true);
   });
 
+  it("upgrades characters saved before hello/voiceArchetype existed", async () => {
+    const { PersistedStory } = await import("../src/view.ts");
+    const old = {
+      id: "orla", name: "Orla", role: "hero", emoji: "🧭", colour: "#ff8800", personality: "p", comicTrait: "t",
+      gender: "female", voiceDescription: "A bright female cartoon heroine's voice with a British accent.",
+    };
+    const parsed = PersistedStory.parse({ cast: [old] });
+    expect(parsed.cast[0]).toMatchObject({ name: "Orla", hello: "Hello! I'm Orla.", voiceArchetype: "kid-hero-female" });
+  });
+
   it("reports a friendly error for a run that died", () => {
     const view = buildView({ id: "story_1", state: empty, pending: undefined, progress: idleProgress });
     expect(view.status).toBe("error");

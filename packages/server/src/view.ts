@@ -12,10 +12,24 @@ import {
 } from "@storytime/domain";
 import { z } from "zod";
 
+/**
+ * Characters saved before `hello` / `voiceArchetype` existed (2026-09-25) get sensible
+ * defaults, so older stories still open and replay.
+ */
+function upgradeCharacter(raw: unknown): unknown {
+  const parsed = z.record(z.string(), z.unknown()).safeParse(raw);
+  if (!parsed.success) return raw;
+  const stored = parsed.data;
+  const name = typeof stored["name"] === "string" ? stored["name"] : "";
+  const gender = stored["gender"];
+  const voiceArchetype = gender === "female" ? "kid-hero-female" : gender === "male" ? "kid-hero-male" : "creature-neutral";
+  return { voiceArchetype, hello: `Hello! I'm ${name}.`, ...stored };
+}
+
 /** The subset of graph state the view needs, validated (checkpoints are untrusted JSON). */
 export const PersistedStory = z.object({
   idea: z.string().optional(),
-  cast: z.array(Character).default([]),
+  cast: z.array(z.preprocess(upgradeCharacter, Character)).default([]),
   outline: Outline.optional(),
   script: PageScript.optional(),
   performance: z.array(PerformedSegment).default([]),
