@@ -10,7 +10,6 @@ graph TD;
 	reviewOutline(reviewOutline)
 	reviseOutline(reviseOutline)
 	recast(recast)
-	redraftPage(redraftPage)
 	performPage(performPage)
 	__end__([<p>__end__</p>]):::last
 	__start__ --> understand;
@@ -20,8 +19,7 @@ graph TD;
 	draftPage --> reviewOutline;
 	performPage --> __end__;
 	planOutline --> draftPage;
-	recast --> redraftPage;
-	redraftPage --> reviewOutline;
+	recast --> draftPage;
 	reviseOutline --> recast;
 	understand -.-> castCharacters;
 	understand -.-> askQuestion;

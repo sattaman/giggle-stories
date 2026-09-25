@@ -40,12 +40,13 @@ const VoiceRewrite = z.object({ voiceDescription: z.string().min(20).max(600) })
 
 export class StoryWriter {
   private readonly storyteller: string;
+  private readonly model: Pick<StructuredModel, "generate">;
 
-  constructor(
-    private readonly model: StructuredModel,
-    ageBand: AgeBand = DEFAULT_AGE_BAND,
-  ) {
+  /** `signal` (a graph node's) cancels in-flight model calls when the node times out. */
+  constructor(model: StructuredModel, ageBand: AgeBand = DEFAULT_AGE_BAND, signal?: AbortSignal) {
     this.storyteller = storyteller(ageBand);
+    this.model =
+      signal === undefined ? model : { generate: (request) => model.generate({ ...request, signal }) };
   }
 
   async extractBrief(idea: string, answers: readonly QuestionAndAnswer[]): Promise<StoryBrief> {

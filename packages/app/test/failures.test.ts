@@ -1,9 +1,9 @@
 // Failure contracts: which failures are corrected, which fall back to text, which surface.
 
-import { INTERRUPT, MemorySaver, Command, isInterrupted } from "@langchain/langgraph";
+import { Command, INTERRUPT, MemorySaver, NodeTimeoutError, isInterrupted } from "@langchain/langgraph";
 import { describe, expect, it } from "vitest";
 import { compileStoryGraph } from "../src/graph/story-graph.ts";
-import type { SpeechSynthesizer } from "../src/ports.ts";
+import type { SpeechSynthesizer, StructuredModel } from "../src/ports.ts";
 import { StoryWriter } from "../src/writer/story-writer.ts";
 import { FakeModel, brief, cast, decisions, deps, outline, script } from "../testing/fakes.ts";
 
@@ -76,5 +76,39 @@ describe("failures that surface", () => {
     await expect(graph.invoke({ storyId: "f", idea: "Pip" }, config)).rejects.toThrow("no response for extract_brief");
     // The failed node is still pending, so a later invoke(null) would retry it (task 10).
     expect((await graph.getState(config)).next).toEqual(["understand"]);
+  });
+});
+
+describe("pauses validate what they're given", () => {
+  it("asks again, without doing any work, when a resume value doesn't fit", async () => {
+    const { graph, config, model } = setup({});
+    await graph.invoke({ storyId: "f", idea: "Pip" }, config);
+    await graph.invoke(new Command({ resume: "Moon cheese" }), config);
+    const calls = model.calls.length;
+
+    const again = await graph.invoke(new Command({ resume: { approved: false, feedback: "   " } }), config);
+    if (!isInterrupted(again)) throw new Error("expected the outline review again");
+    expect(again[INTERRUPT][0]?.value).toMatchObject({ kind: "outline_review" });
+    expect(model.calls).toHaveLength(calls); // no revision ran
+  });
+});
+
+describe("node timeouts", () => {
+  it("aborts a hung provider call and fails the run instead of hanging", async () => {
+    let aborted = false;
+    const hung: StructuredModel = {
+      generate: ({ signal }) =>
+        new Promise((_, reject) => {
+          signal?.addEventListener("abort", () => {
+            aborted = true;
+            reject(new Error("request cancelled"));
+          });
+        }),
+    };
+    const graph = compileStoryGraph(new MemorySaver(), { idleTimeoutMs: 50 });
+    const config = { configurable: { thread_id: "t" }, context: { deps: deps({ model: hung }) } };
+    await expect(graph.invoke({ storyId: "t", idea: "Pip" }, config)).rejects.toBeInstanceOf(NodeTimeoutError);
+    expect(aborted).toBe(true);
+    expect((await graph.getState(config)).next).toEqual(["understand"]); // retryable later
   });
 });

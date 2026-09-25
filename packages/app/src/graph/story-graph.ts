@@ -3,7 +3,7 @@
 //   START → understand ─(question?)→ askQuestion ⏸ ─→ understand   (max 2 rounds)
 //                └─(ready)→ castCharacters ─┬→ designVoices ────────────────┐
 //                                          └→ planOutline → draftPage ─────┴→ reviewOutline ⏸
-//   reviewOutline ─(changes)→ reviseOutline → recast → redraftPage → reviewOutline
+//   reviewOutline ─(changes)→ reviseOutline → recast → draftPage → reviewOutline
 //                 └─(yes!)→ performPage → END
 //
 // Page 1 is drafted while voices are designed (both slow), so after "Yes!" the child
@@ -65,8 +65,28 @@ export const StoryContext = z.object({ deps: z.custom<StoryDeps>().optional() })
 type Ctx = z.infer<typeof StoryContext>;
 type Node = GraphNode<typeof StoryState, Ctx>;
 
-export type ClarificationAnswer = string;
-export type OutlineDecision = { readonly approved: true } | { readonly approved: false; readonly feedback: string };
+/** What the child sends back at each pause, validated inside the graph (any caller can resume). */
+export const ClarificationAnswer = z.string().trim().min(1);
+export type ClarificationAnswer = z.infer<typeof ClarificationAnswer>;
+export const OutlineDecision = z.union([
+  z.object({ approved: z.literal(true) }),
+  z.object({ approved: z.literal(false), feedback: z.string().trim().min(1) }),
+]);
+export type OutlineDecision = z.infer<typeof OutlineDecision>;
+
+/** Graph-wide node timeout: a hung provider call aborts the node's signal instead of hanging the story. */
+export const NODE_IDLE_TIMEOUT_MS = 120_000;
+
+/**
+ * Pauses with `payload` until the resume value fits `schema`. An invalid value re-asks the same
+ * question (LangGraph matches repeated interrupt() calls in a node by order).
+ */
+function ask<S extends z.ZodType>(payload: Pending, schema: S): z.infer<S> {
+  for (;;) {
+    const parsed = schema.safeParse(interrupt(payload));
+    if (parsed.success) return parsed.data;
+  }
+}
 
 const SEGMENT_CONCURRENCY = 3;
 
@@ -100,7 +120,7 @@ function required<T>(value: T | undefined, what: string): T {
 
 const understand: Node = async (state, config) => {
   const deps = depsOf(config);
-  const writer = new StoryWriter(deps.model, state.ageBand);
+  const writer = new StoryWriter(deps.model, state.ageBand, config.signal);
   deps.progress.stage(state.storyId, "understanding", "Thinking about your idea…");
 
   const brief = await writer.extractBrief(state.idea, state.answers);
@@ -118,6 +138,7 @@ const understand: Node = async (state, config) => {
   let audioUrl: string | null = null;
   try {
     const speech = await deps.speech.synthesize({
+      signal: config.signal,
       text: decision.question,
       voiceId: deps.narratorVoiceId,
       fallbackVoice: narratorFallback(deps),
@@ -138,7 +159,7 @@ const askQuestion: Node = (state) => {
     questionAudioUrl: state.pendingQuestionAudioUrl ?? null,
     round: state.answers.length + 1,
   };
-  const answer = interrupt<Pending, ClarificationAnswer>(payload);
+  const answer = ask(payload, ClarificationAnswer);
   return new Command({
     update: {
       answers: [...state.answers, { question, answer }],
@@ -152,17 +173,17 @@ const askQuestion: Node = (state) => {
 const castCharacters: Node = async (state, config) => {
   const deps = depsOf(config);
   deps.progress.stage(state.storyId, "casting", "Meeting your characters…");
-  const profiles = await new StoryWriter(deps.model, state.ageBand).cast(required(state.brief, "brief"));
+  const profiles = await new StoryWriter(deps.model, state.ageBand, config.signal).cast(required(state.brief, "brief"));
   return { cast: profiles.map((profile) => ({ ...profile })) };
 };
 
 const designVoices: Node = async (state, config) => {
   const deps = depsOf(config);
-  const writer = new StoryWriter(deps.model, state.ageBand);
+  const writer = new StoryWriter(deps.model, state.ageBand, config.signal);
   deps.progress.stage(state.storyId, "casting", "Giving everyone a voice…");
   const picks = pickLibraryVoices(deps, state.cast, new Set());
   const cast = await Promise.all(
-    state.cast.map((character, index) => withVoice(deps, writer, state.storyId, character, index, "", picks.get(character.id))),
+    state.cast.map((character, index) => withVoice(deps, writer, config.signal, state.storyId, character, index, "", picks.get(character.id))),
   );
   return { cast };
 };
@@ -189,6 +210,7 @@ function pickLibraryVoices(
 async function withVoice(
   deps: StoryDeps,
   writer: StoryWriter,
+  signal: AbortSignal | undefined,
   storyId: string,
   character: CharacterProfile,
   index: number,
@@ -197,7 +219,7 @@ async function withVoice(
 ): Promise<Character> {
   const { preview, ...voice } =
     libraryVoice === undefined
-      ? await voiceFor(deps, writer, character, index)
+      ? await voiceFor(deps, writer, signal, character, index)
       : { voiceId: libraryVoice, source: "library" as const, preview: undefined };
   let sampleUrl: string | null = null;
   try {
@@ -206,6 +228,7 @@ async function withVoice(
     try {
       wav = (
         await deps.speech.synthesize({
+          signal,
           text: character.hello,
           voiceId: voice.voiceId,
           fallbackVoice: deps.voices.fallback(character.gender, index),
@@ -231,6 +254,7 @@ async function withVoice(
 async function voiceFor(
   deps: StoryDeps,
   writer: StoryWriter,
+  signal: AbortSignal | undefined,
   character: CharacterProfile,
   index: number,
 ): Promise<{ voiceId: string; source: "library" | "designed" | "catalog"; preview: Uint8Array | undefined }> {
@@ -242,7 +266,7 @@ async function voiceFor(
     for (;;) {
       attempts.push(description);
       try {
-        const { voiceId, preview } = await deps.voices.design({ name: character.name, gender: character.gender, description });
+        const { voiceId, preview } = await deps.voices.design({ name: character.name, gender: character.gender, description, signal });
         return { voiceId, source: "designed", preview };
       } catch (error: unknown) {
         if (!(error instanceof VoiceRejectedError) || !mayRewrite) throw error;
@@ -268,12 +292,12 @@ async function voiceFor(
 const planOutline: Node = async (state, config) => {
   const deps = depsOf(config);
   deps.progress.stage(state.storyId, "outlining", "Planning your story…");
-  const result = await new StoryWriter(deps.model, state.ageBand).outline(required(state.brief, "brief"), state.cast);
+  const result = await new StoryWriter(deps.model, state.ageBand, config.signal).outline(required(state.brief, "brief"), state.cast);
   return { outline: result };
 };
 
 const reviewOutline: Node = (state) => {
-  const decision = interrupt<Pending, OutlineDecision>({ kind: "outline_review", outline: required(state.outline, "outline") });
+  const decision = ask({ kind: "outline_review", outline: required(state.outline, "outline") }, OutlineDecision);
   return decision.approved
     ? new Command({ update: { outlineFeedback: undefined }, goto: "performPage" })
     : new Command({ update: { outlineFeedback: decision.feedback }, goto: "reviseOutline" });
@@ -281,7 +305,7 @@ const reviewOutline: Node = (state) => {
 
 const reviseOutline: Node = async (state, config) => {
   const deps = depsOf(config);
-  const writer = new StoryWriter(deps.model, state.ageBand);
+  const writer = new StoryWriter(deps.model, state.ageBand, config.signal);
   deps.progress.stage(state.storyId, "outlining", "Changing the plan…");
   const feedback = required(state.outlineFeedback, "outlineFeedback");
   // The change is part of the child's brief from now on (e.g. "Rolo is a girl").
@@ -294,7 +318,7 @@ const reviseOutline: Node = async (state, config) => {
 /** Applies the change to the cast; only characters whose voice should change get a new one. */
 const recast: Node = async (state, config) => {
   const deps = depsOf(config);
-  const writer = new StoryWriter(deps.model, state.ageBand);
+  const writer = new StoryWriter(deps.model, state.ageBand, config.signal);
   deps.progress.stage(state.storyId, "casting", "Updating your characters…");
   const updated = await writer.recast(
     required(state.brief, "brief"),
@@ -319,7 +343,7 @@ const recast: Node = async (state, config) => {
       const oldVoice = before.get(character.id)?.voice;
       if (keeps(character) && oldVoice !== undefined) return { ...character, voice: oldVoice };
       deps.log.info({ storyId: state.storyId, character: character.id }, "character changed; new voice");
-      return withVoice(deps, writer, state.storyId, character, index, `-r${round}`, picks.get(character.id));
+      return withVoice(deps, writer, config.signal, state.storyId, character, index, `-r${round}`, picks.get(character.id));
     }),
   );
   return { cast };
@@ -328,7 +352,7 @@ const recast: Node = async (state, config) => {
 const draftPage: Node = async (state, config) => {
   const deps = depsOf(config);
   deps.progress.stage(state.storyId, "writing", "Getting page one ready…");
-  const script = await new StoryWriter(deps.model, state.ageBand).writePage(
+  const script = await new StoryWriter(deps.model, state.ageBand, config.signal).writePage(
     required(state.brief, "brief"),
     state.cast,
     required(state.outline, "outline"),
@@ -350,7 +374,7 @@ const performPage: Node = async (state, config) => {
     if (voiceId === undefined) return { ...base, audioUrl: null, durationMs: null };
     try {
       const fallbackVoice = segment.speaker === "narrator" ? narratorFallback(deps) : (fallbackOf.get(segment.speaker) ?? "Puck");
-      const speech = await deps.speech.synthesize({ text: segment.text, voiceId, fallbackVoice, style: segment.style });
+      const speech = await deps.speech.synthesize({ text: segment.text, voiceId, fallbackVoice, style: segment.style, signal: config.signal });
       const audioUrl = await deps.audio.save(state.storyId, `page-${String(script.page)}-${String(index).padStart(2, "0")}`, speech.wav);
       deps.progress.segmentPerformed(state.storyId, { index, audioUrl, durationMs: speech.durationMs });
       return { ...base, audioUrl, durationMs: speech.durationMs };
@@ -367,6 +391,8 @@ const performPage: Node = async (state, config) => {
 export interface BuildOptions {
   /** Used when a run's context has no deps, e.g. the Studio dev server. Never set in production. */
   readonly defaultDeps?: StoryDeps;
+  /** Node idle timeout; tests shorten it. */
+  readonly idleTimeoutMs?: number;
 }
 
 export function buildStoryGraph(options: BuildOptions = {}) {
@@ -380,11 +406,10 @@ export function buildStoryGraph(options: BuildOptions = {}) {
     .addNode("designVoices", node(designVoices))
     .addNode("planOutline", node(planOutline))
     .addNode("draftPage", node(draftPage))
-    .addNode("reviewOutline", node(reviewOutline), { ends: ["performPage", "reviseOutline"] })
+    // Deferred: runs once, after whichever of designVoices / draftPage were scheduled have finished.
+    .addNode("reviewOutline", node(reviewOutline), { ends: ["performPage", "reviseOutline"], defer: true })
     .addNode("reviseOutline", node(reviseOutline))
     .addNode("recast", node(recast))
-    // Same work as draftPage; a separate node because the join below fires only once.
-    .addNode("redraftPage", node(draftPage))
     .addNode("performPage", node(performPage))
     .addEdge(START, "understand")
     .addConditionalEdges("understand", (state) => (state.pendingQuestion === undefined ? "castCharacters" : "askQuestion"), [
@@ -394,14 +419,15 @@ export function buildStoryGraph(options: BuildOptions = {}) {
     .addEdge("castCharacters", "designVoices")
     .addEdge("castCharacters", "planOutline")
     .addEdge("planOutline", "draftPage")
-    .addEdge(["designVoices", "draftPage"], "reviewOutline")
+    .addEdge("designVoices", "reviewOutline")
+    .addEdge("draftPage", "reviewOutline")
     .addEdge("reviseOutline", "recast")
-    .addEdge("recast", "redraftPage")
-    .addEdge("redraftPage", "reviewOutline")
-    .addEdge("performPage", END);
+    .addEdge("recast", "draftPage")
+    .addEdge("performPage", END)
+    .setNodeDefaults({ timeout: { idleTimeout: options.idleTimeoutMs ?? NODE_IDLE_TIMEOUT_MS } });
 }
 
-export function compileStoryGraph(checkpointer: BaseCheckpointSaver) {
-  return buildStoryGraph().compile({ checkpointer, name: "storytime" });
+export function compileStoryGraph(checkpointer: BaseCheckpointSaver, options: BuildOptions = {}) {
+  return buildStoryGraph(options).compile({ checkpointer, name: "storytime" });
 }
 export type StoryGraph = ReturnType<typeof compileStoryGraph>;

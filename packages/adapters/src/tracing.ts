@@ -15,6 +15,7 @@ export function tracedSpeech(inner: SpeechSynthesizer): SpeechSynthesizer {
       run_type: "llm",
       tags: ["gemini", "tts"],
       metadata: gemini(TTS_MODEL), // may fall back to the Lite model when Flash's daily quota runs out
+      processInputs: (request) => ({ text: request.text, voice_id: request.voiceId, style: request.style }),
       processOutputs: (out) => ({ duration_ms: out.durationMs, wav_bytes: out.wav.byteLength }),
     }),
   };
@@ -27,6 +28,7 @@ export function tracedVoices(inner: VoiceDesigner): VoiceDesigner {
       run_type: "tool",
       tags: ["gemini", "voice-design"],
       metadata: gemini(TTS_MODEL),
+      processInputs: (request) => ({ name: request.name, gender: request.gender, description: request.description }),
       processOutputs: (out) => ({ voice_id: out.voiceId, has_preview: out.preview !== undefined }),
     }),
     fallback: (gender, index) => inner.fallback(gender, index),

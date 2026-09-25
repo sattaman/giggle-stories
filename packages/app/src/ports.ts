@@ -12,6 +12,8 @@ export interface StructuredModel {
     readonly system: string;
     readonly prompt: string;
     readonly creative: boolean; // true → higher temperature / creative model
+    /** Aborted when the graph node times out or the run is cancelled. */
+    readonly signal?: AbortSignal | undefined;
   }): Promise<z.infer<S>>;
 }
 
@@ -27,7 +29,12 @@ export interface VoiceDesigner {
    * Creates a persistent voice from a description. Throws VoiceRejectedError on safety blocks.
    * `preview` is a short WAV of the new voice, when the provider supplies one.
    */
-  design(request: { readonly name: string; readonly gender: "female" | "male" | "neutral"; readonly description: string }): Promise<{
+  design(request: {
+    readonly name: string;
+    readonly gender: "female" | "male" | "neutral";
+    readonly description: string;
+    readonly signal?: AbortSignal | undefined;
+  }): Promise<{
     readonly voiceId: string;
     readonly preview: Uint8Array | undefined;
   }>;
@@ -45,6 +52,7 @@ export interface SpeechSynthesizer {
     readonly voiceId: string;
     readonly fallbackVoice: string;
     readonly style: string;
+    readonly signal?: AbortSignal | undefined;
   }): Promise<{
     readonly wav: Uint8Array;
     readonly durationMs: number;
