@@ -5,7 +5,7 @@ import { FakeModel, FakeVoices, RecordingProgress, brief, cast, decisions, deps,
 
 const pipAsBoy = { characters: cast.characters.map((c) => ({ ...c, gender: "male", voiceDescription: "A bright, bouncy cartoon hero's voice, male." })) };
 
-function setup(options: { decide: unknown[]; rejectVoices?: boolean; recast?: unknown }) {
+function setup(options: { decide: unknown[]; rejectVoices?: boolean; recast?: unknown; stock?: boolean }) {
   const model = new FakeModel({
     extract_brief: [brief],
     decide_clarification: options.decide,
@@ -19,7 +19,7 @@ function setup(options: { decide: unknown[]; rejectVoices?: boolean; recast?: un
   const progress = new RecordingProgress();
   const voices = new FakeVoices(options.rejectVoices ?? false);
   const graph = compileStoryGraph(new MemorySaver());
-  const config = { configurable: { thread_id: "story-1" }, context: { deps: deps({ model, progress, voices }) } };
+  const config = { configurable: { thread_id: "story-1" }, context: { deps: deps({ model, progress, voices, stockVoices: options.stock === true ? { female: "voice_stock_f" } : {} }) } };
   return { graph, config, model, progress, voices };
 }
 
@@ -76,6 +76,13 @@ describe("story graph", () => {
     if (!isInterrupted(revised)) throw new Error("expected outline review");
     expect(voices.designed).toHaveLength(1);
     expect(revised.cast[0]?.voice?.voiceId).toBe("voice_pip");
+  });
+
+  it("uses a stock cartoon voice when design is rejected twice", async () => {
+    const { graph, config } = setup({ decide: [decisions.ready], rejectVoices: true, stock: true });
+    const review = await graph.invoke(start, config);
+    if (!isInterrupted(review)) throw new Error("expected outline review");
+    expect(review.cast[0]?.voice).toMatchObject({ voiceId: "voice_stock_f", source: "designed" });
   });
 
   it("falls back to a catalogue voice when voice design is rejected", async () => {

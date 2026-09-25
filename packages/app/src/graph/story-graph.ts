@@ -22,6 +22,7 @@ import {
   PerformedSegment,
   StoryBrief,
   childVoiceCues,
+  sanitizeVoiceDescription,
   type CharacterProfile,
   type Pending,
 } from "@storytime/domain";
@@ -155,50 +156,61 @@ async function withVoice(
   const { preview, ...voice } = await voiceFor(deps, writer, character, index);
   let sampleUrl: string | null = null;
   try {
-    // Prefer the free preview from voice design; otherwise say hello in character (1 TTS call).
-    const wav =
-      preview ??
-      (
-        await deps.speech.synthesize({
-          text: character.catchphrase ?? `Hello! I'm ${character.name}.`,
-          voiceId: voice.voiceId,
-          style: "introducing myself, in character",
-        })
+    // The character says hello in their own voice (1 TTS call); the design preview is the backup.
+    let wav: Uint8Array | undefined;
+    try {
+      wav = (
+        await deps.speech.synthesize({ text: character.hello, voiceId: voice.voiceId, style: "saying hello to a new friend, in character" })
       ).wav;
-    sampleUrl = await deps.audio.save(storyId, `voice-${character.id}${sampleSuffix}`, wav);
+    } catch (error: unknown) {
+      deps.log.warn({ storyId, character: character.id, error: String(error) }, "hello line failed; using preview");
+      wav = preview;
+    }
+    if (wav !== undefined) sampleUrl = await deps.audio.save(storyId, `voice-${character.id}${sampleSuffix}`, wav);
   } catch (error: unknown) {
     deps.log.warn({ storyId, character: character.id, error: String(error) }, "voice sample failed");
   }
   return { ...character, voice: { ...voice, sampleUrl } };
 }
 
-/** Designed voice → rewritten description → catalogue voice. The child never sees a failure. */
+/**
+ * Voice for a character, most personal first:
+ *   designed (description cleaned of blocked wording) → designed from an LLM rewrite
+ *   → stock cartoon voice (pre-approved) → catalogue voice. The child never sees a failure.
+ */
 async function voiceFor(
   deps: StoryDeps,
   writer: StoryWriter,
   character: CharacterProfile,
   index: number,
 ): Promise<{ voiceId: string; source: "designed" | "catalog"; preview: Uint8Array | undefined }> {
+  const attempts: string[] = [];
   try {
-    let description = character.voiceDescription;
+    let description = sanitizeVoiceDescription(character.voiceDescription);
+    if (description.length < 20) description = await writer.rewriteVoiceDescription(character);
     let mayRewrite = true;
-    if (childVoiceCues(description).length > 0) {
-      description = await writer.rewriteVoiceDescription(character);
-      mayRewrite = false;
-    }
     for (;;) {
+      attempts.push(description);
       try {
         const { voiceId, preview } = await deps.voices.design({ name: character.name, gender: character.gender, description });
         return { voiceId, source: "designed", preview };
       } catch (error: unknown) {
         if (!(error instanceof VoiceRejectedError) || !mayRewrite) throw error;
-        deps.log.warn({ character: character.id, description }, "voice description rejected; rewriting");
+        deps.log.warn(
+          { character: character.id, description, cues: childVoiceCues(description) },
+          "voice description rejected; rewriting",
+        );
         description = await writer.rewriteVoiceDescription({ ...character, voiceDescription: description });
         mayRewrite = false;
       }
     }
   } catch (error: unknown) {
-    deps.log.warn({ character: character.id, error: String(error) }, "voice design failed; using catalogue voice");
+    const stock = deps.stockVoices[character.gender];
+    deps.log.warn(
+      { character: character.id, attempts, error: String(error), fallback: stock === undefined ? "catalog" : "stock" },
+      "voice design failed; using fallback voice",
+    );
+    if (stock !== undefined) return { voiceId: stock, source: "designed", preview: undefined };
     return { voiceId: deps.voices.fallback(character.gender, index), source: "catalog", preview: undefined };
   }
 }

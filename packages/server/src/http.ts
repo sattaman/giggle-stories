@@ -3,7 +3,7 @@
 import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
 import type { Transcriber } from "@storytime/app";
-import { ReplyBody, StartStoryBody, type TranscriptionResult } from "@storytime/domain";
+import { ReplyBody, StartStoryBody, type NarrationClips, type TranscriptionResult } from "@storytime/domain";
 import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
 import Fastify, { type FastifyBaseLogger, type FastifyInstance } from "fastify";
@@ -29,6 +29,7 @@ const AudioParams = z.object({ story: z.string(), file: z.string() });
 export interface HttpDeps {
   readonly stories: StoryService;
   readonly transcriber: Transcriber;
+  readonly narration: () => NarrationClips;
   readonly audioPath: (storyId: string, file: string) => string | undefined;
   readonly logger: FastifyBaseLogger | false;
 }
@@ -51,6 +52,8 @@ export async function buildHttp(deps: HttpDeps): Promise<FastifyInstance> {
   });
 
   app.get("/v1/health", () => ({ ok: true }));
+
+  app.get("/v1/narration", () => deps.narration());
 
   // Raw audio is transcribed in memory and never stored (privacy).
   app.post("/v1/transcriptions", async (request, reply) => {

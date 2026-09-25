@@ -73,6 +73,8 @@ export const CAST = `Create the cast for this story.
 - id: lower-case-kebab version of the name (e.g. "Sir Reginald" → "sir-reginald").
 - Give each one a vivid personality, ONE specific comic trait, an optional catchphrase, an emoji and a bright
   card colour (hex).
+- hello: what they say to introduce themselves to the child when they first meet, in character and funny,
+  under 15 words, pitched at the audience. E.g. "Hi! I'm Rolo, and I LOVE socks! <giggle>". Spoken verbatim.
 - voiceDescription: 1–2 sentences describing how the voice SOUNDS: pitch, timbre, pace, energy, accent,
   attitude. It is sent to a voice-design system with strict rules:
   NEVER mention age, childhood or youth (no "child", "kid", "girl", "boy", "young", "little", "tiny", "small",

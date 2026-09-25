@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { childVoiceCues, missingCharacters, scriptProblems, slugify } from "../src/invariants.ts";
+import { childVoiceCues, missingCharacters, sanitizeVoiceDescription, scriptProblems, slugify } from "../src/invariants.ts";
 import type { CharacterProfile, PageScript } from "../src/story.ts";
 
 const pip: CharacterProfile = {
@@ -12,6 +12,7 @@ const pip: CharacterProfile = {
   comicTrait: "builds rockets out of bins",
   gender: "female",
   voiceDescription: "A very high, soft, adorable animated-character voice, bouncy and excitable.",
+  hello: "Hi! I'm Pip!",
 };
 
 describe("slugify", () => {
@@ -28,6 +29,15 @@ describe("childVoiceCues", () => {
   });
   it("passes descriptions of sound only", () => {
     expect(childVoiceCues(pip.voiceDescription)).toEqual([]);
+  });
+});
+
+describe("sanitizeVoiceDescription", () => {
+  it("strips child cues but keeps the sound of the voice", () => {
+    const cleaned = sanitizeVoiceDescription("A bright, cheeky young boy's voice, tiny and squeaky, with a Scottish accent.");
+    expect(childVoiceCues(cleaned)).toEqual([]);
+    expect(cleaned).toContain("bright");
+    expect(cleaned).toContain("Scottish accent");
   });
 });
 

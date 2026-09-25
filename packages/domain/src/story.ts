@@ -68,6 +68,11 @@ export const CharacterProfile = z.object({
   personality: z.string().max(600),
   comicTrait: z.string().max(400).describe("The one funny thing about them."),
   catchphrase: z.string().max(200).optional(),
+  hello: z
+    .string()
+    .min(1)
+    .max(200)
+    .describe('What the character says to introduce themselves to the child, in character, under 15 words. E.g. "Hi! I\'m Rolo, and I LOVE socks! <giggle>"'),
   gender: z.enum(["female", "male", "neutral"]),
   voiceDescription: z
     .string()

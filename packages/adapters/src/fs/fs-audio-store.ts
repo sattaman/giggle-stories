@@ -21,6 +21,10 @@ export class FsAudioStore implements AudioStore {
     return `${this.publicBase}/${storyId}/${name}.wav`;
   }
 
+  urlFor(storyId: string, file: string): string {
+    return `${this.publicBase}/${storyId}/${file}`;
+  }
+
   pathFor(storyId: string, file: string): string | undefined {
     if (!SAFE.test(storyId) || !/^[a-zA-Z0-9_-]+\.wav$/.test(file)) return undefined;
     return join(this.root, storyId, file);

@@ -75,4 +75,6 @@ export interface StoryDeps {
   readonly progress: ProgressSink;
   readonly log: Logger;
   readonly narratorVoiceId: string;
+  /** Pre-approved designed cartoon voices, used when a character's own design is rejected. */
+  readonly stockVoices: Readonly<Partial<Record<"female" | "male" | "neutral", string>>>;
 }

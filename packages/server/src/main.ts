@@ -19,6 +19,7 @@ import { mkdir } from "node:fs/promises";
 import { pino } from "pino";
 import { loadDotEnv, readConfig } from "./config.ts";
 import { buildHttp } from "./http.ts";
+import { Narration, ensureStockVoices } from "./narration.ts";
 import { ensureNarratorVoice } from "./narrator.ts";
 import { GraphStoryService } from "./story-service.ts";
 
@@ -43,11 +44,20 @@ const model = new OpenRouterStructuredModel(config.OPENROUTER_API_KEY, log, {
 });
 
 const narratorVoiceId = await ensureNarratorVoice(voices, config.DATA_DIR, log);
+const stockVoices = await ensureStockVoices(voices, config.DATA_DIR, log);
+const narration = new Narration(speech, audio, narratorVoiceId, log);
 const graph = compileStoryGraph(SqliteSaver.fromConnString(join(config.DATA_DIR, "checkpoints.sqlite")));
-const stories = new GraphStoryService(graph, { model, voices, speech, audio, log, narratorVoiceId }, log);
+const stories = new GraphStoryService(graph, { model, voices, speech, audio, log, narratorVoiceId, stockVoices }, log);
 
-const app = await buildHttp({ stories, transcriber, audioPath: (s, f) => audio.pathFor(s, f), logger: log });
+const app = await buildHttp({
+  stories,
+  transcriber,
+  narration: () => narration.view(),
+  audioPath: (s, f) => audio.pathFor(s, f),
+  logger: log,
+});
 await app.listen({ port: config.PORT, host: config.HOST });
+void narration.prepare(); // one-off TTS in the background; cached on disk afterwards
 log.info(
   { url: config.publicUrl, models: model.models, narratorVoiceId, tracing: process.env["LANGSMITH_TRACING"] === "true" },
   "storytime server ready",

@@ -76,6 +76,7 @@ describe("http", () => {
     buildHttp({
       stories,
       transcriber: { transcribe: () => Promise.resolve("hello") },
+      narration: () => ({ clips: { welcome: "http://a/w.wav", idea: null, thinking: null, voices_intro: null, voices_outro: null, changing: null, ready: null, the_end: null } }),
       audioPath: () => undefined,
       logger: false,
     });
@@ -84,6 +85,11 @@ describe("http", () => {
     const res = await (await app()).inject({ method: "POST", url: "/v1/stories", payload: { idea: "a rocket" } });
     expect(res.statusCode).toBe(201);
     expect(res.json()).toMatchObject({ id: "story_abc" });
+  });
+
+  it("serves narration clips", async () => {
+    const res = await (await app()).inject({ method: "GET", url: "/v1/narration" });
+    expect(res.json()).toMatchObject({ clips: { welcome: "http://a/w.wav", idea: null } });
   });
 
   it("validates bodies and ids", async () => {
@@ -98,6 +104,7 @@ describe("http", () => {
     const server = await buildHttp({
       stories: { ...stories, start: () => Promise.reject(z.string().safeParse(1).error ?? new Error("x")) },
       transcriber: { transcribe: () => Promise.resolve("") },
+      narration: () => ({ clips: { welcome: null, idea: null, thinking: null, voices_intro: null, voices_outro: null, changing: null, ready: null, the_end: null } }),
       audioPath: () => undefined,
       logger: false,
     });

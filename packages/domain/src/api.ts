@@ -76,3 +76,22 @@ export type ReplyBody = z.infer<typeof ReplyBody>;
 
 export const TranscriptionResult = z.object({ text: z.string() });
 export type TranscriptionResult = z.infer<typeof TranscriptionResult>;
+
+// ── Narration: fixed narrator lines that guide the child through making a story.
+// Generated once on the server (narrator voice) and cached; no per-story cost.
+
+export const NarrationKey = z.enum([
+  "welcome", // home screen
+  "idea", // idea screen: pick an age, tap the mic
+  "thinking", // right after the idea is sent
+  "voices_intro", // outline review: before the characters say hello
+  "voices_outro", // after the hellos: check voices, read the plan
+  "changing", // after "Change something" is sent
+  "ready", // page 1 ready, before "Start the story!"
+  "the_end", // after page 1 finishes
+]);
+export type NarrationKey = z.infer<typeof NarrationKey>;
+
+/** GET /v1/narration: URL per key (null if that clip couldn't be generated). */
+export const NarrationClips = z.object({ clips: z.record(NarrationKey, z.string().nullable()) });
+export type NarrationClips = z.infer<typeof NarrationClips>;

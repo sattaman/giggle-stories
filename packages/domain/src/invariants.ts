@@ -23,6 +23,21 @@ export function childVoiceCues(description: string): string[] {
   return [...description.matchAll(new RegExp(CHILD_VOICE_CUES, "gi"))].map((m) => m[0]);
 }
 
+/**
+ * Removes wording Voice Design is likely to block, keeping the rest of the description.
+ * Cheap first line of defence before an LLM rewrite.
+ */
+export function sanitizeVoiceDescription(description: string): string {
+  return description
+    .replace(new RegExp(CHILD_VOICE_CUES, "gi"), "")
+    .replace(/\b(a|an)\s+(?=[,.;]|and\b|with\b|$)/gi, "")
+    .replace(/\s*,\s*(,\s*)+/g, ", ")
+    .replace(/\s{2,}/g, " ")
+    .replace(/\s+([,.;])/g, "$1")
+    .replace(/^[\s,;]+|[\s,;]+$/g, "")
+    .trim();
+}
+
 /** Every character the child named must survive into the cast, unrenamed. */
 export function missingCharacters(
   sketches: readonly CharacterSketch[],

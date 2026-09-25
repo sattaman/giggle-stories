@@ -32,6 +32,7 @@ export const cast: Cast = {
       comicTrait: "builds everything out of bins",
       gender: "female",
       voiceDescription: "A very high, soft, adorable animated-character voice, bouncy and excitable.",
+      hello: "Hi! I'm Pip, and I build rockets out of bins!",
     },
   ],
 };
@@ -112,6 +113,7 @@ export function deps(overrides: Partial<StoryDeps> & { model: StructuredModel })
     progress: new RecordingProgress(),
     log: silentLog,
     narratorVoiceId: "voice_narrator",
+    stockVoices: {},
     ...overrides,
   };
 }
