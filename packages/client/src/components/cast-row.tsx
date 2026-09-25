@@ -1,5 +1,4 @@
 import { StyleSheet, View } from "react-native";
-import type { ClipPlayer } from "../audio/use-clip-player.ts";
 import type { CastMember } from "../story/cast.ts";
 import { CharacterCard } from "./character-card.tsx";
 
@@ -8,10 +7,10 @@ export interface CastRowProps {
   readonly speakingId?: string | null;
   readonly compact?: boolean;
   /** When given, cards with a voice sample get a "Hear my voice" button. */
-  readonly clips?: ClipPlayer;
+  readonly onHearVoice?: (member: CastMember) => void;
 }
 
-export function CastRow({ cast, speakingId = null, compact = false, clips }: CastRowProps) {
+export function CastRow({ cast, speakingId = null, compact = false, onHearVoice }: CastRowProps) {
   return (
     <View style={styles.row}>
       {cast.map((member) => (
@@ -21,8 +20,14 @@ export function CastRow({ cast, speakingId = null, compact = false, clips }: Cas
           compact={compact}
           speaking={member.id === speakingId}
           dimmed={speakingId !== null}
-          voicePlaying={clips !== undefined && member.sampleUrl !== null && clips.playingUrl === member.sampleUrl}
-          {...(clips === undefined ? {} : { onHearVoice: clips.play })}
+          voicePlaying={member.id === speakingId}
+          {...(onHearVoice === undefined
+            ? {}
+            : {
+                onHearVoice: () => {
+                  onHearVoice(member);
+                },
+              })}
         />
       ))}
     </View>

@@ -13,7 +13,7 @@ export interface CharacterCardProps {
   readonly dimmed?: boolean;
   readonly compact?: boolean;
   /** Offer "Hear my voice" (only when the member has a sample). */
-  readonly onHearVoice?: (url: string) => void;
+  readonly onHearVoice?: () => void;
   readonly voicePlaying?: boolean;
 }
 
@@ -24,7 +24,6 @@ export function CharacterCard({ member, speaking = false, dimmed = false, compac
   }, [speaking, scale]);
   const grow = useAnimatedStyle(() => ({ transform: [{ scale: scale.get() }] }));
 
-  const sampleUrl = member.sampleUrl;
   return (
     <Animated.View
       style={[
@@ -43,13 +42,11 @@ export function CharacterCard({ member, speaking = false, dimmed = false, compac
         {member.name}
       </Text>
       {!compact && member.trait !== null && <Text style={styles.trait}>{member.trait}</Text>}
-      {onHearVoice !== undefined && sampleUrl !== null && (
+      {onHearVoice !== undefined && member.sampleUrl !== null && (
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`Hear ${member.name}'s voice`}
-          onPress={() => {
-            onHearVoice(sampleUrl);
-          }}
+          onPress={onHearVoice}
           style={({ pressed }) => [styles.voice, { backgroundColor: member.colour, opacity: pressed ? 0.8 : 1 }]}
         >
           <Text style={styles.voiceLabel}>{voicePlaying ? "🔊 Listening…" : "▶ Hear my voice"}</Text>

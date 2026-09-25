@@ -2,11 +2,13 @@ import type { Character, Performance } from "@storytime/domain";
 import { StyleSheet, Text, View } from "react-native";
 import { castOf, memberFor } from "../story/cast.ts";
 import { displayText } from "../story/lines.ts";
+import { useNarration } from "../story/narration.tsx";
 import { currentIndex } from "../story/playback.ts";
 import { usePlayback } from "../story/use-playback.ts";
 import { BigButton } from "./big-button.tsx";
 import { Bouncy } from "./bouncy.tsx";
 import { CastRow } from "./cast-row.tsx";
+import { NarrationLine } from "./narration-line.tsx";
 import { SpeechBubble } from "./speech-bubble.tsx";
 import { text } from "./text-styles.ts";
 import { colours, fonts } from "./theme.ts";
@@ -21,7 +23,17 @@ export interface PerformanceViewProps {
 /** The story page: plays each line in order, lighting up whoever is speaking. */
 export function PerformanceView({ performance, characters, title, onAnotherStory }: PerformanceViewProps) {
   const playback = usePlayback(performance);
+  const narration = useNarration();
   const { state, segments } = playback;
+  // The story always gets the stage: hush the narrator first.
+  const start = () => {
+    narration.stop();
+    playback.start();
+  };
+  const resume = () => {
+    narration.stop();
+    playback.resume();
+  };
   const cast = castOf(characters, true);
   const index = currentIndex(state);
   const current = index === null ? undefined : segments[index];
@@ -35,8 +47,9 @@ export function PerformanceView({ performance, characters, title, onAnotherStory
 
       {state.phase === "ready" && (
         <View style={styles.center}>
+          <NarrationLine line="ready" />
           <Bouncy height={10}>
-            <BigButton variant="go" size="huge" label="▶ Start the story!" onPress={playback.start} />
+            <BigButton variant="go" size="huge" label="▶ Start the story!" onPress={start} />
           </Bouncy>
           {segments.every((s) => s.audioUrl === null) && <Text style={text.body}>The voices are still warming up — it'll start as soon as they're ready.</Text>}
         </View>
@@ -58,11 +71,11 @@ export function PerformanceView({ performance, characters, title, onAnotherStory
       {(state.phase === "playing" || state.phase === "waiting" || state.phase === "paused") && (
         <View style={styles.controls}>
           {state.phase === "paused" ? (
-            <BigButton variant="go" label="▶ Keep going" onPress={playback.resume} />
+            <BigButton variant="go" label="▶ Keep going" onPress={resume} />
           ) : (
             <BigButton variant="soft" label="⏸ Pause" onPress={playback.pause} />
           )}
-          <BigButton variant="soft" label="⏮ Start again" onPress={playback.start} />
+          <BigButton variant="soft" label="⏮ Start again" onPress={start} />
         </View>
       )}
 
@@ -71,10 +84,11 @@ export function PerformanceView({ performance, characters, title, onAnotherStory
           <Bouncy height={14}>
             <Text style={styles.theEnd}>The End… of page 1! 😂</Text>
           </Bouncy>
+          <NarrationLine line="the_end" />
           <Text style={text.heading}>Did you laugh?</Text>
           <View style={styles.controls}>
             <BigButton variant="primary" size="huge" label="Make another story ✨" onPress={onAnotherStory} />
-            <BigButton variant="soft" label="🔁 Hear it again" onPress={playback.start} />
+            <BigButton variant="soft" label="🔁 Hear it again" onPress={start} />
           </View>
         </View>
       )}

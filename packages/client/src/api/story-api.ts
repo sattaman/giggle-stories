@@ -1,7 +1,7 @@
 // Driven port: everything the child UI needs from the Storytime server.
 // Implemented over HTTP (http-story-api.ts) and in memory (mock-story-api.ts).
 
-import type { AgeBand, ReplyBody, StoryView } from "@storytime/domain";
+import type { AgeBand, NarrationClips, ReplyBody, StoryView } from "@storytime/domain";
 
 /** A finished recording, in the shape each platform's FormData understands. */
 export type AudioUpload =
@@ -14,6 +14,8 @@ export interface StoryApi {
   start(idea: string, ageBand: AgeBand): Promise<StoryView>;
   get(id: string): Promise<StoryView>;
   reply(id: string, body: ReplyBody): Promise<StoryView>;
+  /** The narrator's fixed guide lines. Callers treat a failure as "no narration". */
+  narration(): Promise<NarrationClips>;
 }
 
 export class ApiError extends Error {
@@ -32,3 +34,15 @@ export class ApiError extends Error {
  * player "plays" them for the segment's duration without making a sound.
  */
 export const SILENT_AUDIO_PREFIX = "silent:";
+
+/** A silent placeholder that carries its own length, for clips whose API has no duration field. */
+export function silentUrl(label: string, durationMs: number): string {
+  return `${SILENT_AUDIO_PREFIX}${label}?ms=${String(Math.round(durationMs))}`;
+}
+
+/** The length baked into a `silentUrl`, or null for real audio and plain silent placeholders. */
+export function silentDurationMs(url: string): number | null {
+  if (!url.startsWith(SILENT_AUDIO_PREFIX)) return null;
+  const match = /\?ms=(\d+)$/.exec(url);
+  return match?.[1] === undefined ? null : Number(match[1]);
+}

@@ -5,6 +5,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { useStoryApi } from "../api/api-context.tsx";
 import { AgePicker } from "../components/age-picker.tsx";
 import { BigButton } from "../components/big-button.tsx";
+import { NarrationLine } from "../components/narration-line.tsx";
 import { Screen } from "../components/screen.tsx";
 import { SpeechInput } from "../components/speech-input.tsx";
 import { text } from "../components/text-styles.ts";
@@ -31,6 +32,7 @@ export default function IdeaScreen() {
       }} style={styles.back} />
       <View style={styles.header}>
         <Text style={text.title}>Tell me your story idea!</Text>
+        <NarrationLine line="idea" />
         <Text style={text.body}>Who's in it? Where are they? What silly thing happens?</Text>
       </View>
       <AgePicker value={ageBand} onChange={setAgeBand} />

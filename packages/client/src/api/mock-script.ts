@@ -1,6 +1,6 @@
 // Canned content for the in-memory mock API (EXPO_PUBLIC_MOCK=1).
 
-import type { Character, Outline, Segment } from "@storytime/domain";
+import type { Character, NarrationKey, Outline, Segment } from "@storytime/domain";
 
 export const MOCK_TRANSCRIPTS: readonly string[] = [
   "A duck who is a pirate and is scared of cheese",
@@ -20,6 +20,7 @@ export const MOCK_CHARACTERS: readonly Character[] = [
     personality: "Brave about everything except dairy products.",
     comicTrait: "Faints whenever anyone says the word 'cheese'.",
     catchphrase: "Quack the sails!",
+    hello: "Ahoy! I'm Captain Crumbs, and I'm NOT scared of anything! Except cheese.",
     gender: "male",
     voiceDescription: "A booming, gravelly pirate voice with a surprising little quack at the end of sentences.",
   },
@@ -31,6 +32,7 @@ export const MOCK_CHARACTERS: readonly Character[] = [
     colour: "#3DBE6A",
     personality: "Very sensible, very green, very tired of rescuing the captain.",
     comicTrait: "Speaks in rhymes when she gets nervous.",
+    hello: "Hello, dear! I'm Mrs Pickle. Someone has to keep the captain out of trouble.",
     gender: "female",
     voiceDescription: "A crisp, posh, slightly croaky voice that speeds up into sing-song rhymes when flustered.",
   },
@@ -58,3 +60,15 @@ export const MOCK_SEGMENTS: readonly Segment[] = [
   { speaker: "narrator", text: "There was a long, long silence. Then Captain Crumbs fell over backwards into a bucket.", style: "comic timing" },
   { speaker: "mrs-pickle", text: "Oh my, oh me, he's fainted, you see! Somebody fetch him a nice cup of tea!", style: "flustered rhyme" },
 ];
+
+/** How long each mock narrator line "plays" for (the mock's clips are silent). */
+export const MOCK_NARRATION_MS: Readonly<Record<NarrationKey, number>> = {
+  welcome: 3500,
+  idea: 3500,
+  thinking: 3000,
+  voices_intro: 2500,
+  voices_outro: 3000,
+  changing: 2500,
+  ready: 2500,
+  the_end: 3000,
+};

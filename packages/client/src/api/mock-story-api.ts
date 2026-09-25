@@ -2,9 +2,9 @@
 // Timers walk each story through the same states the real server produces:
 // working stages → one clarification → outline review → a progressive performance.
 
-import { StoryView, type PerformedSegment, type ReplyBody } from "@storytime/domain";
-import { ApiError, SILENT_AUDIO_PREFIX, type StoryApi } from "./story-api.ts";
-import { MOCK_CHARACTERS, MOCK_OUTLINE, MOCK_QUESTION, MOCK_SEGMENTS, MOCK_TRANSCRIPTS } from "./mock-script.ts";
+import { NarrationClips, NarrationKey, StoryView, type PerformedSegment, type ReplyBody } from "@storytime/domain";
+import { ApiError, SILENT_AUDIO_PREFIX, silentUrl, type StoryApi } from "./story-api.ts";
+import { MOCK_CHARACTERS, MOCK_NARRATION_MS, MOCK_OUTLINE, MOCK_QUESTION, MOCK_SEGMENTS, MOCK_TRANSCRIPTS } from "./mock-script.ts";
 
 const STEP_MS = 1500;
 const SEGMENT_READY_MS = 1800;
@@ -94,6 +94,12 @@ export function createMockStoryApi(): StoryApi {
       }
       return snapshot(id);
     },
+
+    async narration(): Promise<NarrationClips> {
+      await delay(LATENCY_MS);
+      const clips = Object.fromEntries(NarrationKey.options.map((key) => [key, silentUrl(`narration-${key}`, MOCK_NARRATION_MS[key])]));
+      return NarrationClips.parse({ clips });
+    },
   };
 }
 
@@ -104,7 +110,10 @@ function castingSteps(): Step[] {
       afterMs: STEP_MS * 1.5,
       apply: (v) => ({
         ...working(v, "outlining", "Planning the adventure…"),
-        characters: MOCK_CHARACTERS.map((c) => ({ ...c, voice: { voiceId: `mock-${c.id}`, source: "designed", sampleUrl: null } })),
+        characters: MOCK_CHARACTERS.map((c) => ({
+          ...c,
+          voice: { voiceId: `mock-${c.id}`, source: "designed", sampleUrl: silentUrl(`hello-${c.id}`, estimateDurationMs(c.hello)) },
+        })),
       }),
     },
     { afterMs: STEP_MS, apply: (v) => outlineReview(v, MOCK_OUTLINE.storyTitle) },

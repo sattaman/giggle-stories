@@ -3,6 +3,7 @@ import { StyleSheet, Text, TextInput, View } from "react-native";
 import { useStoryApi } from "../api/api-context.tsx";
 import { formatElapsed } from "../speech/speech-machine.ts";
 import { useSpeechInput } from "../speech/use-speech-input.ts";
+import { useNarration } from "../story/narration.tsx";
 import { BigButton } from "./big-button.tsx";
 import { MicButton } from "./mic-button.tsx";
 import { text } from "./text-styles.ts";
@@ -23,11 +24,13 @@ export interface SpeechInputProps {
 /** Say it (tap the mic) or type it, check it, send it. */
 export function SpeechInput({ submitLabel, placeholder, onSubmit, onListen }: SpeechInputProps) {
   const speech = useSpeechInput(useStoryApi());
+  const narration = useNarration();
   const [sending, setSending] = useState(false);
   const [sendFailed, setSendFailed] = useState(false);
   const { state } = speech;
 
   function listen(): void {
+    narration.stop();
     onListen?.();
     void speech.startRecording();
   }

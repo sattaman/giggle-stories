@@ -1,9 +1,12 @@
+import type { Character, NarrationKey, ReplyBody } from "@storytime/domain";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { useStoryApi } from "../../api/api-context.tsx";
 import { BigButton } from "../../components/big-button.tsx";
 import { CastRow } from "../../components/cast-row.tsx";
 import { ClarificationView } from "../../components/clarification-view.tsx";
+import { NarrationLine } from "../../components/narration-line.tsx";
 import { OopsCard } from "../../components/oops-card.tsx";
 import { OutlineReview } from "../../components/outline-review.tsx";
 import { PerformanceView } from "../../components/performance-view.tsx";
@@ -45,8 +48,26 @@ function StoryBody({ id, onStartOver }: { readonly id: string; readonly onStartO
   );
 }
 
+/** What the child last did, which decides what the narrator says while we work. */
+type LastStep = "idea" | "answer" | "change" | "approve";
+
+const WORKING_LINES: Record<LastStep, NarrationKey | null> = {
+  idea: "thinking",
+  answer: null,
+  change: "changing",
+  approve: null,
+};
+
 function StoryStep({ session, onStartOver }: { readonly session: StorySession; readonly onStartOver: () => void }) {
-  const { load, reply } = session;
+  const { load } = session;
+  const [lastStep, setLastStep] = useState<LastStep>("idea");
+  // The voice introductions play by themselves the first time the plan appears.
+  const [introHeard, setIntroHeard] = useState(false);
+  const reply = (step: LastStep, body: ReplyBody): Promise<boolean> => {
+    setLastStep(step);
+    return session.reply(body);
+  };
+
   switch (load.kind) {
     case "loading":
       return <WaitingCard message="Opening your story…" />;
@@ -60,19 +81,14 @@ function StoryStep({ session, onStartOver }: { readonly session: StorySession; r
   const screen = screenFor(view);
   switch (screen.kind) {
     case "working":
-      return (
-        <View style={styles.body}>
-          <WaitingCard message={screen.message} />
-          {view.characters.length > 0 && <CastRow cast={castOf(view.characters, false)} />}
-        </View>
-      );
+      return <WorkingStep message={screen.message} characters={view.characters} line={WORKING_LINES[lastStep]} />;
     case "clarification":
       return (
         <ClarificationView
           key={`${String(screen.round)}:${screen.question}`}
           question={screen.question}
           audioUrl={screen.audioUrl}
-          onAnswer={(text) => reply({ kind: "answer", text })}
+          onAnswer={(text) => reply("answer", { kind: "answer", text })}
         />
       );
     case "outline":
@@ -81,8 +97,12 @@ function StoryStep({ session, onStartOver }: { readonly session: StorySession; r
           key={screen.outline.storyTitle}
           outline={screen.outline}
           characters={view.characters}
-          onApprove={() => reply({ kind: "outline", approved: true })}
-          onChange={(feedback) => reply({ kind: "outline", approved: false, feedback })}
+          autoIntro={!introHeard}
+          onIntroStarted={() => {
+            setIntroHeard(true);
+          }}
+          onApprove={() => reply("approve", { kind: "outline", approved: true })}
+          onChange={(feedback) => reply("change", { kind: "outline", approved: false, feedback })}
         />
       );
     case "performance":
@@ -103,6 +123,24 @@ function StoryStep({ session, onStartOver }: { readonly session: StorySession; r
         />
       );
   }
+}
+
+function WorkingStep({
+  message,
+  characters,
+  line,
+}: {
+  readonly message: string;
+  readonly characters: readonly Character[];
+  readonly line: NarrationKey | null;
+}) {
+  return (
+    <View style={styles.body}>
+      {line !== null && <NarrationLine line={line} />}
+      <WaitingCard message={message} />
+      {characters.length > 0 && <CastRow cast={castOf(characters, false)} />}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
