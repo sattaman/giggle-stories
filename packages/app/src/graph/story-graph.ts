@@ -158,13 +158,32 @@ const designVoices: Node = async (state, config) => {
   const deps = depsOf(config);
   const writer = new StoryWriter(deps.model, state.ageBand);
   deps.progress.stage(state.storyId, "casting", "Giving everyone a voice…");
+  const picks = pickLibraryVoices(deps, state.cast, new Set());
   const cast = await Promise.all(
-    state.cast.map((character, index) => withVoice(deps, writer, state.storyId, character, index, "")),
+    state.cast.map((character, index) => withVoice(deps, writer, state.storyId, character, index, "", picks.get(character.id))),
   );
   return { cast };
 };
 
-/** Designs (or falls back to) a voice for a character and stores a short sample clip. */
+/** Library voice per character, never giving two characters the same voice. */
+function pickLibraryVoices(
+  deps: StoryDeps,
+  characters: readonly CharacterProfile[],
+  taken: ReadonlySet<string>,
+): Map<string, string> {
+  const used = new Set(taken);
+  const picks = new Map<string, string>();
+  for (const character of characters) {
+    const voiceId = deps.voiceLibrary[character.voiceArchetype];
+    if (voiceId !== undefined && !used.has(voiceId)) {
+      used.add(voiceId);
+      picks.set(character.id, voiceId);
+    }
+  }
+  return picks;
+}
+
+/** Library voice if given, else a designed (or fallback) voice; plus a short hello clip. */
 async function withVoice(
   deps: StoryDeps,
   writer: StoryWriter,
@@ -172,8 +191,12 @@ async function withVoice(
   character: CharacterProfile,
   index: number,
   sampleSuffix: string,
+  libraryVoice: string | undefined,
 ): Promise<Character> {
-  const { preview, ...voice } = await voiceFor(deps, writer, character, index);
+  const { preview, ...voice } =
+    libraryVoice === undefined
+      ? await voiceFor(deps, writer, character, index)
+      : { voiceId: libraryVoice, source: "library" as const, preview: undefined };
   let sampleUrl: string | null = null;
   try {
     // The character says hello in their own voice (1 TTS call); the design preview is the backup.
@@ -208,7 +231,7 @@ async function voiceFor(
   writer: StoryWriter,
   character: CharacterProfile,
   index: number,
-): Promise<{ voiceId: string; source: "designed" | "catalog"; preview: Uint8Array | undefined }> {
+): Promise<{ voiceId: string; source: "library" | "designed" | "catalog"; preview: Uint8Array | undefined }> {
   const attempts: string[] = [];
   try {
     let description = sanitizeVoiceDescription(character.voiceDescription);
@@ -278,14 +301,23 @@ const recast: Node = async (state, config) => {
   );
   const before = new Map(state.cast.map((c) => [c.id, c]));
   const round = String(state.answers.length);
+  const keeps = (character: CharacterProfile): boolean => {
+    const old = before.get(character.id);
+    return (
+      old?.voice !== undefined &&
+      old.gender === character.gender &&
+      old.voiceArchetype === character.voiceArchetype &&
+      old.voiceDescription === character.voiceDescription
+    );
+  };
+  const keptVoices = new Set(updated.filter(keeps).flatMap((c) => before.get(c.id)?.voice?.voiceId ?? []));
+  const picks = pickLibraryVoices(deps, updated.filter((c) => !keeps(c)), keptVoices);
   const cast = await Promise.all(
     updated.map(async (character, index): Promise<Character> => {
-      const old = before.get(character.id);
-      const sameVoice =
-        old?.voice !== undefined && old.gender === character.gender && old.voiceDescription === character.voiceDescription;
-      if (sameVoice) return { ...character, voice: old.voice };
-      deps.log.info({ storyId: state.storyId, character: character.id }, "character changed; designing a new voice");
-      return withVoice(deps, writer, state.storyId, character, index, `-r${round}`);
+      const oldVoice = before.get(character.id)?.voice;
+      if (keeps(character) && oldVoice !== undefined) return { ...character, voice: oldVoice };
+      deps.log.info({ storyId: state.storyId, character: character.id }, "character changed; new voice");
+      return withVoice(deps, writer, state.storyId, character, index, `-r${round}`, picks.get(character.id));
     }),
   );
   return { cast };

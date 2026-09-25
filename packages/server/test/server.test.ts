@@ -71,6 +71,7 @@ describe("http", () => {
     start: () => Promise.resolve(view),
     view: (id) => (id === "story_abc" ? Promise.resolve(view) : Promise.reject(new StoryNotFoundError(id))),
     reply: () => Promise.reject(new StoryConflictError("Story isn't waiting for a reply")),
+    list: () => Promise.resolve([]),
   };
   const app = () =>
     buildHttp({

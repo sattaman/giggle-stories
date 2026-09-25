@@ -3,9 +3,10 @@
 
 import { randomUUID } from "node:crypto";
 import type { Logger, ProgressSink, StoryDeps, StoryGraph } from "@storytime/app";
-import type { AgeBand, ReplyBody, StoryStage, StoryView } from "@storytime/domain";
+import type { AgeBand, ReplyBody, StoryStage, StorySummary, StoryView } from "@storytime/domain";
 import { Command } from "@langchain/langgraph";
 import { z } from "zod";
+import type { StoryIndex } from "./story-index.ts";
 import { PersistedStory, buildView, idleProgress, type LiveProgress } from "./view.ts";
 
 export class StoryConflictError extends Error {}
@@ -31,6 +32,7 @@ export interface StoryService {
   start(idea: string, ageBand: AgeBand): Promise<StoryView>;
   reply(id: string, body: ReplyBody): Promise<StoryView>;
   view(id: string): Promise<StoryView>;
+  list(): Promise<StorySummary[]>;
 }
 
 export class GraphStoryService implements StoryService, ProgressSink {
@@ -41,6 +43,7 @@ export class GraphStoryService implements StoryService, ProgressSink {
     private readonly graph: StoryGraph,
     deps: Omit<StoryDeps, "progress">,
     private readonly log: Logger,
+    private readonly index: StoryIndex,
   ) {
     this.deps = { ...deps, progress: this };
   }
@@ -60,6 +63,7 @@ export class GraphStoryService implements StoryService, ProgressSink {
   async start(idea: string, ageBand: AgeBand): Promise<StoryView> {
     const id = `story_${randomUUID().replaceAll("-", "")}`;
     this.log.info({ storyId: id, ageBand }, "story started");
+    await this.index.add({ id, createdAt: new Date().toISOString(), ageBand });
     this.run(id, { storyId: id, idea, ageBand });
     return this.view(id);
   }
@@ -85,6 +89,30 @@ export class GraphStoryService implements StoryService, ProgressSink {
 
     const pending = firstInterruptValue(snapshot.tasks);
     return buildView({ id, state: PersistedStory.parse(values), pending, progress });
+  }
+
+  async list(): Promise<StorySummary[]> {
+    const summaries: StorySummary[] = [];
+    for (const entry of (await this.index.list()).slice(0, 50)) {
+      try {
+        const view = await this.view(entry.id);
+        const segments = view.performance?.segments ?? [];
+        summaries.push({
+          id: view.id,
+          title: view.title,
+          idea: view.idea ?? "",
+          ageBand: entry.ageBand,
+          createdAt: entry.createdAt,
+          status: view.status,
+          characters: view.characters.map(({ name, emoji, colour }) => ({ name, emoji, colour })),
+          voicedLines: segments.filter((segment) => segment.audioUrl !== null).length,
+          totalLines: segments.length,
+        });
+      } catch {
+        // Unknown or unreadable story: leave it out.
+      }
+    }
+    return summaries;
   }
 
   // ── internals ──

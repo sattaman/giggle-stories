@@ -3,9 +3,11 @@ import { describe, expect, it } from "vitest";
 import { compileStoryGraph } from "../src/graph/story-graph.ts";
 import { FakeModel, FakeVoices, RecordingProgress, brief, cast, decisions, deps, outline, script } from "./fakes.ts";
 
-const pipAsBoy = { characters: cast.characters.map((c) => ({ ...c, gender: "male", voiceDescription: "A bright, bouncy cartoon hero's voice, male." })) };
+const pipAsBoy = {
+  characters: cast.characters.map((c) => ({ ...c, gender: "male", voiceArchetype: "kid-hero-male", voiceDescription: "A bright, bouncy cartoon hero's voice, male." })),
+};
 
-function setup(options: { decide: unknown[]; rejectVoices?: boolean; recast?: unknown; stock?: boolean }) {
+function setup(options: { decide: unknown[]; rejectVoices?: boolean; recast?: unknown; stock?: boolean; library?: boolean }) {
   const model = new FakeModel({
     extract_brief: [brief],
     decide_clarification: options.decide,
@@ -19,7 +21,7 @@ function setup(options: { decide: unknown[]; rejectVoices?: boolean; recast?: un
   const progress = new RecordingProgress();
   const voices = new FakeVoices(options.rejectVoices ?? false);
   const graph = compileStoryGraph(new MemorySaver());
-  const config = { configurable: { thread_id: "story-1" }, context: { deps: deps({ model, progress, voices, stockVoices: options.stock === true ? { female: "voice_stock_f" } : {} }) } };
+  const config = { configurable: { thread_id: "story-1" }, context: { deps: deps({ model, progress, voices, stockVoices: options.stock === true ? { female: "voice_stock_f" } : {}, voiceLibrary: options.library === true ? { "kid-hero-female": "voice_lib_heroine", "kid-hero-male": "voice_lib_hero" } : {} }) } };
   return { graph, config, model, progress, voices };
 }
 
@@ -87,6 +89,14 @@ describe("story graph", () => {
     if (!isInterrupted(revised)) throw new Error("expected outline review");
     expect(voices.designed).toHaveLength(1);
     expect(revised.cast[0]?.voice?.voiceId).toBe("voice_pip");
+  });
+
+  it("uses the ready-made library voice without designing one", async () => {
+    const { graph, config, voices } = setup({ decide: [decisions.ready], library: true });
+    const review = await graph.invoke(start, config);
+    if (!isInterrupted(review)) throw new Error("expected outline review");
+    expect(review.cast[0]?.voice).toMatchObject({ voiceId: "voice_lib_heroine", source: "library" });
+    expect(voices.designed).toHaveLength(0);
   });
 
   it("uses a stock cartoon voice when design is rejected twice", async () => {

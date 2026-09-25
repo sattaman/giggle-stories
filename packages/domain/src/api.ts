@@ -95,3 +95,21 @@ export type NarrationKey = z.infer<typeof NarrationKey>;
 /** GET /v1/narration: URL per key (null if that clip couldn't be generated). */
 export const NarrationClips = z.object({ clips: z.record(NarrationKey, z.string().nullable()) });
 export type NarrationClips = z.infer<typeof NarrationClips>;
+
+// ── Story library: GET /v1/stories (most recent first).
+
+export const StorySummary = z.object({
+  id: z.string(),
+  title: z.string().nullable(),
+  idea: z.string(),
+  ageBand: AgeBand,
+  createdAt: z.string().describe("ISO timestamp"),
+  status: StoryView.shape.status,
+  characters: z.array(z.object({ name: z.string(), emoji: z.string(), colour: z.string() })),
+  voicedLines: z.number().int(),
+  totalLines: z.number().int(),
+});
+export type StorySummary = z.infer<typeof StorySummary>;
+
+export const StoryList = z.object({ stories: z.array(StorySummary) });
+export type StoryList = z.infer<typeof StoryList>;

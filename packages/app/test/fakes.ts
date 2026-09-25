@@ -31,6 +31,7 @@ export const cast: Cast = {
       personality: "fearless inventor",
       comicTrait: "builds everything out of bins",
       gender: "female",
+      voiceArchetype: "kid-hero-female",
       voiceDescription: "A very high, soft, adorable animated-character voice, bouncy and excitable.",
       hello: "Hi! I'm Pip, and I build rockets out of bins!",
     },
@@ -114,6 +115,7 @@ export function deps(overrides: Partial<StoryDeps> & { model: StructuredModel })
     log: silentLog,
     narratorVoiceId: "voice_narrator",
     stockVoices: {},
+    voiceLibrary: {},
     ...overrides,
   };
 }

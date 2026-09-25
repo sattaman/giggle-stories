@@ -59,6 +59,28 @@ export type ClarificationDecision = z.infer<typeof ClarificationDecision>;
 
 // ── The cast ─────────────────────────────────────────────────────────────────
 
+/**
+ * Ready-made character voices, designed once and reused across stories (fast, no per-story
+ * voice design). The story writer picks the best fit for each character.
+ */
+export const VoiceArchetype = z.enum([
+  "kid-hero-female",
+  "kid-cheeky-female",
+  "mum",
+  "granny",
+  "villain-female",
+  "animal-female",
+  "kid-hero-male",
+  "kid-cheeky-male",
+  "dad",
+  "grandad",
+  "villain-male",
+  "creature-male",
+  "creature-neutral",
+  "robot",
+]);
+export type VoiceArchetype = z.infer<typeof VoiceArchetype>;
+
 export const CharacterProfile = z.object({
   id: CharacterId,
   name: z.string().min(1).max(60),
@@ -74,6 +96,7 @@ export const CharacterProfile = z.object({
     .max(200)
     .describe('What the character says to introduce themselves to the child, in character, under 15 words. E.g. "Hi! I\'m Rolo, and I LOVE socks! <giggle>"'),
   gender: z.enum(["female", "male", "neutral"]),
+  voiceArchetype: VoiceArchetype.describe("The ready-made voice that best fits; must match gender where it has one."),
   voiceDescription: z
     .string()
     .min(20)
@@ -82,9 +105,10 @@ export const CharacterProfile = z.object({
 });
 export type CharacterProfile = z.infer<typeof CharacterProfile>;
 
+
 export const VoiceAssignment = z.object({
   voiceId: z.string().min(1),
-  source: z.enum(["designed", "catalog"]),
+  source: z.enum(["library", "designed", "catalog"]),
   /** A short "hello, it's me" line in this voice, for the character card. */
   sampleUrl: z.string().nullable(),
 });

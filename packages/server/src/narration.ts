@@ -6,7 +6,7 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { AudioStore, Logger, SpeechSynthesizer, VoiceDesigner } from "@storytime/app";
-import { NarrationKey, type NarrationClips } from "@storytime/domain";
+import { NarrationKey, VoiceArchetype, type NarrationClips } from "@storytime/domain";
 import { z } from "zod";
 
 type Gender = "female" | "male" | "neutral";
@@ -17,6 +17,87 @@ const STOCK_DESCRIPTIONS: Record<Gender, string> = {
   male: "A bright, bouncy, energetic cartoon hero's voice, cheeky and fast-talking, with a British accent.",
   neutral: "A cheerful, playful animated-character voice, bright and bouncy, with a British accent.",
 };
+
+/** Ready-made voices by archetype. Gender stated plainly; no child wording (Voice Design rules). */
+const LIBRARY: Record<VoiceArchetype, { readonly gender: Gender; readonly description: string }> = {
+  "kid-hero-female": { gender: "female", description: STOCK_DESCRIPTIONS.female },
+  "kid-cheeky-female": {
+    gender: "female",
+    description: "A bright, quick, mischievous female cartoon heroine's voice with a cheeky giggle in it, with a British accent.",
+  },
+  mum: { gender: "female", description: "A warm, kind, gently humorous female voice, calm and reassuring, with a British accent." },
+  granny: {
+    gender: "female",
+    description: "A crackly, cheerful, slightly wobbly elderly female voice, full of warmth and mischief, with a Yorkshire accent.",
+  },
+  "villain-female": {
+    gender: "female",
+    description: "A silky, sly, theatrical female villain's voice, purring and dramatic, with a posh British accent.",
+  },
+  "animal-female": {
+    gender: "female",
+    description: "A lively female cartoon animal voice, warmly rounded and slightly breathy, bouncing with eager, friendly energy, with a British accent.",
+  },
+  "kid-hero-male": { gender: "male", description: STOCK_DESCRIPTIONS.male },
+  "kid-cheeky-male": {
+    gender: "male",
+    description: "A scratchy, mischievous male cartoon voice, fast-talking and full of schemes, with a London accent.",
+  },
+  dad: { gender: "male", description: "A friendly, slightly goofy male voice, warm and upbeat, who loves a bad joke, with a British accent." },
+  grandad: { gender: "male", description: "A jolly, gravelly elderly male voice, slow and chuckling, with a West Country accent." },
+  "villain-male": {
+    gender: "male",
+    description: "A booming, pompous, old-fashioned male English aristocrat's voice, theatrical and easily offended.",
+  },
+  "creature-male": {
+    gender: "male",
+    description: "A gravelly, grumbling, slow male creature voice with a Scottish accent, secretly soft-hearted.",
+  },
+  "creature-neutral": { gender: "neutral", description: STOCK_DESCRIPTIONS.neutral },
+  robot: {
+    gender: "neutral",
+    description: "A crisp, precise, slightly metallic robot voice, polite and very literal, with clipped British diction.",
+  },
+};
+
+/**
+ * Designs any missing library voices (once; cached on disk) and fills `target` as each is ready,
+ * so stories started meanwhile simply design their own voices.
+ */
+export async function ensureVoiceLibrary(
+  voices: VoiceDesigner,
+  dataDir: string,
+  log: Logger,
+  target: Partial<Record<VoiceArchetype, string>>,
+): Promise<void> {
+  const path = join(dataDir, "voice-library.json");
+  let cache: z.infer<typeof StockCache> = {};
+  try {
+    cache = StockCache.parse(JSON.parse(await readFile(path, "utf8")));
+  } catch {
+    // Not cached yet.
+  }
+  const missing: VoiceArchetype[] = [];
+  for (const archetype of VoiceArchetype.options) {
+    const cached = cache[archetype];
+    if (cached?.descriptionHash === hash(LIBRARY[archetype].description)) target[archetype] = cached.voiceId;
+    else missing.push(archetype);
+  }
+  if (missing.length > 0) log.info({ missing: missing.length }, "designing voice library (one-off)");
+  for (const archetype of missing) {
+    const { gender, description } = LIBRARY[archetype];
+    try {
+      const { voiceId } = await voices.design({ name: `library-${archetype}`, gender, description });
+      cache[archetype] = { voiceId, descriptionHash: hash(description) };
+      target[archetype] = voiceId;
+      await mkdir(dataDir, { recursive: true });
+      await writeFile(path, JSON.stringify(cache, null, 2));
+    } catch (error: unknown) {
+      log.warn({ archetype, error: String(error) }, "library voice design failed; stories will design their own");
+    }
+  }
+  log.info({ ready: Object.keys(target).length, total: VoiceArchetype.options.length }, "voice library ready");
+}
 
 export const NARRATION: Record<NarrationKey, { readonly text: string; readonly style: string }> = {
   welcome: {

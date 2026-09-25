@@ -3,7 +3,7 @@
 import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
 import type { Transcriber } from "@storytime/app";
-import { ReplyBody, StartStoryBody, type NarrationClips, type TranscriptionResult } from "@storytime/domain";
+import { ReplyBody, StartStoryBody, type NarrationClips, type StoryList, type TranscriptionResult } from "@storytime/domain";
 import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
 import Fastify, { type FastifyBaseLogger, type FastifyInstance } from "fastify";
@@ -69,6 +69,11 @@ export async function buildHttp(deps: HttpDeps): Promise<FastifyInstance> {
   app.post("/v1/stories", async (request, reply) => {
     const { idea, ageBand } = parseRequest(StartStoryBody, request.body);
     return reply.code(201).send(await deps.stories.start(idea, ageBand));
+  });
+
+  app.get("/v1/stories", async () => {
+    const list: StoryList = { stories: await deps.stories.list() };
+    return list;
   });
 
   app.get("/v1/stories/:id", async (request) => {

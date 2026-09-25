@@ -1,7 +1,7 @@
 // Driven ports: everything the story engine needs from the outside world.
 // Adapters (OpenRouter, Gemini, filesystem…) implement these; tests use fakes.
 
-import type { StoryStage } from "@storytime/domain";
+import type { StoryStage, VoiceArchetype } from "@storytime/domain";
 import type { z } from "zod";
 
 /** A language model that returns data matching a zod schema. */
@@ -86,4 +86,6 @@ export interface StoryDeps {
   readonly narratorVoiceId: string;
   /** Pre-approved designed cartoon voices, used when a character's own design is rejected. */
   readonly stockVoices: Readonly<Partial<Record<"female" | "male" | "neutral", string>>>;
+  /** Ready-made character voices by archetype (designed once). Empty → design per character. */
+  readonly voiceLibrary: Readonly<Partial<Record<VoiceArchetype, string>>>;
 }

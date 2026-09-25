@@ -11,6 +11,7 @@ const pip: CharacterProfile = {
   personality: "fearless inventor",
   comicTrait: "builds rockets out of bins",
   gender: "female",
+  voiceArchetype: "kid-hero-female",
   voiceDescription: "A very high, soft, adorable animated-character voice, bouncy and excitable.",
   hello: "Hi! I'm Pip!",
 };

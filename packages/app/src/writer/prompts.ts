@@ -29,6 +29,11 @@ The stories are performed by voice actors: a narrator plus a distinct voice for 
 
 ${AUDIENCE[ageBand]}
 
+The child's idea and answers usually come from SPEECH-TO-TEXT of a child talking, so expect misheard words,
+missing punctuation, repeats, restarts ("and then, and then…"), self-corrections and names spelt different ways
+("sky"/"Skye"). Interpret generously and sensibly: the same name spelt differently is ONE character; never create
+a character, place or plot point from an obvious mishearing, repeat or false start; the child's corrections win.
+
 Non-negotiable rules:
 - THE CHILD'S IDEAS ARE SACRED. Keep every character, name, detail and idea they gave. Never rename anyone.
   Build the story AROUND their ideas; don't replace them with yours.
@@ -95,6 +100,10 @@ export const CAST = `Create the cast for this story.
   GOOD (grown-up): "A booming, pompous, old-fashioned male English aristocrat's voice, theatrical and easily offended."
   GOOD (creature): "A gravelly, grumbling, slow male voice with a Scottish accent, secretly soft-hearted."
   BAD (blocked): "A cheeky eleven-year-old girl." / "A tiny, sweet, squeaky voice." / "A young boy's voice."
+- voiceArchetype: pick the ready-made voice that fits best, matching gender. Kid characters: kid-hero-* for the
+  main/brave ones, kid-cheeky-* for mischievous ones. Parents: mum/dad. Grandparents: granny/grandad. Baddies:
+  villain-*. Pets/animals: animal-female, creature-male or creature-neutral. Machines: robot.
+  Give different characters different archetypes where possible.
 - gender: "female" or "male" whenever the character has one (use the brief's gender for the child's characters).
   Use "neutral" only for characters that genuinely have none (objects, robots, some creatures) or when the
   child's character's gender is unknown.`;
