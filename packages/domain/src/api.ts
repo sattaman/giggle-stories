@@ -2,7 +2,7 @@
 // Clients poll GET /v1/stories/:id; the view is the whole truth about a story.
 
 import { z } from "zod";
-import { Character, Outline, SpeakerId } from "./story.ts";
+import { AgeBand, Character, DEFAULT_AGE_BAND, Outline, SpeakerId } from "./story.ts";
 
 export const StoryStage = z.enum([
   "listening", // transcribing the child's audio
@@ -60,8 +60,11 @@ export const StoryView = z.object({
 });
 export type StoryView = z.infer<typeof StoryView>;
 
-export const StartStoryBody = z.object({ idea: z.string().min(1).max(2000) });
-export type StartStoryBody = z.infer<typeof StartStoryBody>;
+export const StartStoryBody = z.object({
+  idea: z.string().min(1).max(2000),
+  ageBand: AgeBand.default(DEFAULT_AGE_BAND),
+});
+export type StartStoryBody = z.input<typeof StartStoryBody>;
 
 const AnswerReply = z.object({ kind: z.literal("answer"), text: z.string().min(1).max(1000) });
 const OutlineReply = z.discriminatedUnion("approved", [

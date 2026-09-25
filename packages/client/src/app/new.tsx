@@ -1,6 +1,9 @@
+import { DEFAULT_AGE_BAND, type AgeBand } from "@storytime/domain";
 import { useRouter } from "expo-router";
+import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useStoryApi } from "../api/api-context.tsx";
+import { AgePicker } from "../components/age-picker.tsx";
 import { BigButton } from "../components/big-button.tsx";
 import { Screen } from "../components/screen.tsx";
 import { SpeechInput } from "../components/speech-input.tsx";
@@ -9,10 +12,11 @@ import { text } from "../components/text-styles.ts";
 export default function IdeaScreen() {
   const api = useStoryApi();
   const router = useRouter();
+  const [ageBand, setAgeBand] = useState<AgeBand>(DEFAULT_AGE_BAND);
 
   async function startStory(idea: string): Promise<boolean> {
     try {
-      const view = await api.start(idea);
+      const view = await api.start(idea, ageBand);
       router.replace({ pathname: "/story/[id]", params: { id: view.id } });
       return true;
     } catch {
@@ -29,6 +33,7 @@ export default function IdeaScreen() {
         <Text style={text.title}>Tell me your story idea!</Text>
         <Text style={text.body}>Who's in it? Where are they? What silly thing happens?</Text>
       </View>
+      <AgePicker value={ageBand} onChange={setAgeBand} />
       <SpeechInput submitLabel="Yes, go!" placeholder="A dragon who is scared of sandwiches…" onSubmit={startStory} />
     </Screen>
   );

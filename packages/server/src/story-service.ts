@@ -3,7 +3,7 @@
 
 import { randomUUID } from "node:crypto";
 import type { Logger, ProgressSink, StoryDeps, StoryGraph } from "@storytime/app";
-import type { ReplyBody, StoryStage, StoryView } from "@storytime/domain";
+import type { AgeBand, ReplyBody, StoryStage, StoryView } from "@storytime/domain";
 import { Command } from "@langchain/langgraph";
 import { z } from "zod";
 import { PersistedStory, buildView, idleProgress, type LiveProgress } from "./view.ts";
@@ -28,7 +28,7 @@ interface MutableProgress {
 }
 
 export interface StoryService {
-  start(idea: string): Promise<StoryView>;
+  start(idea: string, ageBand: AgeBand): Promise<StoryView>;
   reply(id: string, body: ReplyBody): Promise<StoryView>;
   view(id: string): Promise<StoryView>;
 }
@@ -57,9 +57,10 @@ export class GraphStoryService implements StoryService, ProgressSink {
   }
 
   // ── StoryService ──
-  async start(idea: string): Promise<StoryView> {
+  async start(idea: string, ageBand: AgeBand): Promise<StoryView> {
     const id = `story_${randomUUID().replaceAll("-", "")}`;
-    this.run(id, { storyId: id, idea });
+    this.log.info({ storyId: id, ageBand }, "story started");
+    this.run(id, { storyId: id, idea, ageBand });
     return this.view(id);
   }
 
@@ -96,7 +97,7 @@ export class GraphStoryService implements StoryService, ProgressSink {
     return progress;
   }
 
-  private run(id: string, input: { storyId: string; idea: string } | { resume: unknown }): void {
+  private run(id: string, input: { storyId: string; idea: string; ageBand: AgeBand } | { resume: unknown }): void {
     const progress = this.progressFor(id);
     if (progress.busy) throw new StoryConflictError("Story is already working");
     progress.busy = true;

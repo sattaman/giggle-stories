@@ -10,6 +10,8 @@ import {
   missingCharacters,
   scriptProblems,
   slugify,
+  DEFAULT_AGE_BAND,
+  type AgeBand,
   type CharacterProfile,
 } from "@storytime/domain";
 import { z } from "zod";
@@ -22,8 +24,8 @@ import {
   REVISE_OUTLINE,
   RECAST,
   REWRITE_VOICE,
-  STORYTELLER,
   WRITE_PAGE,
+  storyteller,
   block,
 } from "./prompts.ts";
 
@@ -35,13 +37,20 @@ export interface QuestionAndAnswer {
 const VoiceRewrite = z.object({ voiceDescription: z.string().min(20).max(600) });
 
 export class StoryWriter {
-  constructor(private readonly model: StructuredModel) {}
+  private readonly storyteller: string;
+
+  constructor(
+    private readonly model: StructuredModel,
+    ageBand: AgeBand = DEFAULT_AGE_BAND,
+  ) {
+    this.storyteller = storyteller(ageBand);
+  }
 
   extractBrief(idea: string, answers: readonly QuestionAndAnswer[]): Promise<StoryBrief> {
     return this.model.generate({
       task: "extract_brief",
       schema: StoryBrief,
-      system: `${STORYTELLER}\n\n${EXTRACT_BRIEF}`,
+      system: `${this.storyteller}\n\n${EXTRACT_BRIEF}`,
       prompt: [block("child_idea", idea), block("answers", answers)].join("\n\n"),
       creative: false,
     });
@@ -51,7 +60,7 @@ export class StoryWriter {
     return this.model.generate({
       task: "decide_clarification",
       schema: ClarificationDecision,
-      system: `${STORYTELLER}\n\n${DECIDE}`,
+      system: `${this.storyteller}\n\n${DECIDE}`,
       prompt: [block("brief", brief), block("already_asked", answers)].join("\n\n"),
       creative: false,
     });
@@ -62,7 +71,7 @@ export class StoryWriter {
       this.model.generate({
         task: "cast_characters",
         schema: Cast,
-        system: `${STORYTELLER}\n\n${CAST}`,
+        system: `${this.storyteller}\n\n${CAST}`,
         prompt: [block("brief", brief), ...(feedback === undefined ? [] : [block("fix_this", feedback)])].join("\n\n"),
         creative: true,
       });
@@ -87,7 +96,7 @@ export class StoryWriter {
     const { characters } = await this.model.generate({
       task: "recast_characters",
       schema: Cast,
-      system: `${STORYTELLER}\n\n${CAST}\n\n${RECAST}`,
+      system: `${this.storyteller}\n\n${CAST}\n\n${RECAST}`,
       prompt: [block("brief", brief), block("current_cast", cast), block("child_changes", feedback)].join("\n\n"),
       creative: false,
     });
@@ -105,7 +114,7 @@ export class StoryWriter {
     return this.model.generate({
       task: "outline",
       schema: Outline,
-      system: `${STORYTELLER}\n\n${OUTLINE}`,
+      system: `${this.storyteller}\n\n${OUTLINE}`,
       prompt: [block("brief", brief), block("cast", summariseCast(cast))].join("\n\n"),
       creative: true,
     });
@@ -115,7 +124,7 @@ export class StoryWriter {
     return this.model.generate({
       task: "revise_outline",
       schema: Outline,
-      system: `${STORYTELLER}\n\n${OUTLINE}\n\n${REVISE_OUTLINE}`,
+      system: `${this.storyteller}\n\n${OUTLINE}\n\n${REVISE_OUTLINE}`,
       prompt: [
         block("brief", brief),
         block("cast", summariseCast(cast)),
@@ -131,7 +140,7 @@ export class StoryWriter {
       this.model.generate({
         task: "write_page",
         schema: PageScript,
-        system: `${STORYTELLER}\n\n${WRITE_PAGE}`,
+        system: `${this.storyteller}\n\n${WRITE_PAGE}`,
         prompt: [
           block("brief", brief),
           block("cast", summariseCast(cast)),

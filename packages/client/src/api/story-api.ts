@@ -1,7 +1,7 @@
 // Driven port: everything the child UI needs from the Storytime server.
 // Implemented over HTTP (http-story-api.ts) and in memory (mock-story-api.ts).
 
-import type { ReplyBody, StoryView } from "@storytime/domain";
+import type { AgeBand, ReplyBody, StoryView } from "@storytime/domain";
 
 /** A finished recording, in the shape each platform's FormData understands. */
 export type AudioUpload =
@@ -11,7 +11,7 @@ export type AudioUpload =
 export interface StoryApi {
   /** Speech to text. Resolves to the transcript (possibly empty). */
   transcribe(audio: AudioUpload): Promise<string>;
-  start(idea: string): Promise<StoryView>;
+  start(idea: string, ageBand: AgeBand): Promise<StoryView>;
   get(id: string): Promise<StoryView>;
   reply(id: string, body: ReplyBody): Promise<StoryView>;
 }

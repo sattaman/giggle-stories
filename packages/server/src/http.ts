@@ -64,8 +64,8 @@ export async function buildHttp(deps: HttpDeps): Promise<FastifyInstance> {
   });
 
   app.post("/v1/stories", async (request, reply) => {
-    const { idea } = parseRequest(StartStoryBody, request.body);
-    return reply.code(201).send(await deps.stories.start(idea));
+    const { idea, ageBand } = parseRequest(StartStoryBody, request.body);
+    return reply.code(201).send(await deps.stories.start(idea, ageBand));
   });
 
   app.get("/v1/stories/:id", async (request) => {

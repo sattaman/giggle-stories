@@ -14,6 +14,11 @@ export const CharacterId = z
   .max(40);
 export type CharacterId = z.infer<typeof CharacterId>;
 
+/** Who the story is for: drives language, length, humour and peril. */
+export const AgeBand = z.enum(["0-4", "5-8", "9-12"]);
+export type AgeBand = z.infer<typeof AgeBand>;
+export const DEFAULT_AGE_BAND: AgeBand = "9-12";
+
 export const NARRATOR = "narrator";
 export const SpeakerId = z.union([z.literal(NARRATOR), CharacterId]);
 export type SpeakerId = z.infer<typeof SpeakerId>;

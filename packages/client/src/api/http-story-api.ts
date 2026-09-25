@@ -1,7 +1,7 @@
 // StoryApi over the /v1 HTTP contract. Every response is validated with the
 // domain's zod schemas before it reaches the UI.
 
-import { ReplyBody, StartStoryBody, StoryView, TranscriptionResult } from "@storytime/domain";
+import { ReplyBody, StartStoryBody, StoryView, TranscriptionResult, type AgeBand } from "@storytime/domain";
 import type { z } from "zod";
 import { ApiError, type AudioUpload, type StoryApi } from "./story-api.ts";
 
@@ -45,8 +45,8 @@ export function createHttpStoryApi(baseUrl: string): StoryApi {
       const result = await request("/v1/transcriptions", { method: "POST", body: form }, TranscriptionResult, TRANSCRIBE_TIMEOUT_MS);
       return result.text.trim();
     },
-    start(idea: string): Promise<StoryView> {
-      return postJson("/v1/stories", StartStoryBody.parse({ idea }), StoryView);
+    start(idea: string, ageBand: AgeBand): Promise<StoryView> {
+      return postJson("/v1/stories", StartStoryBody.parse({ idea, ageBand }), StoryView);
     },
     get(id: string): Promise<StoryView> {
       return request(`/v1/stories/${encodeURIComponent(id)}`, { method: "GET" }, StoryView, JSON_TIMEOUT_MS);

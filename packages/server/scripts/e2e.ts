@@ -7,6 +7,7 @@ import { StoryView, type StoryView as View } from "@storytime/domain";
 const base = process.env["API_URL"] ?? "http://localhost:8787";
 const idea = process.argv[2] ?? "My hamster Biscuit wants to be a famous chef but he is scared of spoons";
 const answer = process.argv[3] ?? "Make it really silly!";
+const ageBand = process.env["AGE_BAND"] ?? "9-12";
 const t0 = performance.now();
 const secs = (): string => `${((performance.now() - t0) / 1000).toFixed(1)}s`;
 
@@ -34,8 +35,8 @@ async function settle(id: string, until: (v: View) => boolean): Promise<View> {
   }
 }
 
-let view = await call("/v1/stories", { idea });
-console.log(`story ${view.id}: "${idea}"`);
+let view = await call("/v1/stories", { idea, ageBand });
+console.log(`story ${view.id} (${ageBand}): "${idea}"`);
 view = await settle(view.id, (v) => v.status === "waiting");
 
 while (view.pending?.kind === "clarification") {

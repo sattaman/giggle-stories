@@ -13,7 +13,9 @@
 // design) are never the ones that interrupt — a resumed node re-runs from the top.
 
 import {
+  AgeBand,
   Character,
+  DEFAULT_AGE_BAND,
   MAX_CLARIFICATIONS,
   Outline,
   PageScript,
@@ -43,6 +45,7 @@ const QuestionAndAnswer = z.object({ question: z.string(), answer: z.string() })
 export const StoryState = new StateSchema({
   storyId: z.string(),
   idea: z.string(),
+  ageBand: AgeBand.default(DEFAULT_AGE_BAND),
   answers: z.array(QuestionAndAnswer).default([]),
   brief: StoryBrief.optional(),
   pendingQuestion: z.string().optional(),
@@ -79,7 +82,7 @@ function required<T>(value: T | undefined, what: string): T {
 
 const understand: Node = async (state, config) => {
   const deps = depsOf(config);
-  const writer = new StoryWriter(deps.model);
+  const writer = new StoryWriter(deps.model, state.ageBand);
   deps.progress.stage(state.storyId, "understanding", "Thinking about your idea…");
 
   const brief = await writer.extractBrief(state.idea, state.answers);
@@ -126,13 +129,13 @@ const askQuestion: Node = (state) => {
 const castCharacters: Node = async (state, config) => {
   const deps = depsOf(config);
   deps.progress.stage(state.storyId, "casting", "Meeting your characters…");
-  const profiles = await new StoryWriter(deps.model).cast(required(state.brief, "brief"));
+  const profiles = await new StoryWriter(deps.model, state.ageBand).cast(required(state.brief, "brief"));
   return { cast: profiles.map((profile) => ({ ...profile })) };
 };
 
 const designVoices: Node = async (state, config) => {
   const deps = depsOf(config);
-  const writer = new StoryWriter(deps.model);
+  const writer = new StoryWriter(deps.model, state.ageBand);
   deps.progress.stage(state.storyId, "casting", "Giving everyone a voice…");
   const cast = await Promise.all(
     state.cast.map((character, index) => withVoice(deps, writer, state.storyId, character, index, "")),
@@ -203,7 +206,7 @@ async function voiceFor(
 const planOutline: Node = async (state, config) => {
   const deps = depsOf(config);
   deps.progress.stage(state.storyId, "outlining", "Planning your story…");
-  const result = await new StoryWriter(deps.model).outline(required(state.brief, "brief"), state.cast);
+  const result = await new StoryWriter(deps.model, state.ageBand).outline(required(state.brief, "brief"), state.cast);
   return { outline: result };
 };
 
@@ -216,7 +219,7 @@ const reviewOutline: Node = (state) => {
 
 const reviseOutline: Node = async (state, config) => {
   const deps = depsOf(config);
-  const writer = new StoryWriter(deps.model);
+  const writer = new StoryWriter(deps.model, state.ageBand);
   deps.progress.stage(state.storyId, "outlining", "Changing the plan…");
   const feedback = required(state.outlineFeedback, "outlineFeedback");
   // The change is part of the child's brief from now on (e.g. "Rolo is a girl").
@@ -229,7 +232,7 @@ const reviseOutline: Node = async (state, config) => {
 /** Applies the change to the cast; only characters whose voice should change get a new one. */
 const recast: Node = async (state, config) => {
   const deps = depsOf(config);
-  const writer = new StoryWriter(deps.model);
+  const writer = new StoryWriter(deps.model, state.ageBand);
   deps.progress.stage(state.storyId, "casting", "Updating your characters…");
   const updated = await writer.recast(
     required(state.brief, "brief"),
@@ -254,7 +257,7 @@ const recast: Node = async (state, config) => {
 const draftPage: Node = async (state, config) => {
   const deps = depsOf(config);
   deps.progress.stage(state.storyId, "writing", "Getting page one ready…");
-  const script = await new StoryWriter(deps.model).writePage(
+  const script = await new StoryWriter(deps.model, state.ageBand).writePage(
     required(state.brief, "brief"),
     state.cast,
     required(state.outline, "outline"),
