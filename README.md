@@ -50,15 +50,15 @@ Built as a real product for one very demanding user (success = she laughs and as
 
 ```bash
 pnpm install
-pnpm start
+pnpm dev
 ```
 
-`pnpm start` uses [Turborepo](https://turborepo.com) to run each app's `dev` task side by side: the API on http://localhost:8787 (restarts when its code changes) and the web app on **http://localhost:8082**. Ctrl-C stops both, and the API finishes its current story step before exiting.
+`pnpm dev` uses [Turborepo](https://turborepo.com) to run each app's `dev` task side by side: the API on http://localhost:8787 (restarts when its code changes) and the web app on **http://localhost:8082**. Ctrl-C stops both, and the API finishes its current story step before exiting.
 
 For a phone or iPad on the same Wi-Fi network, set the API address before starting, then open the Expo URL on the device, replacing `localhost` with your Mac's IP:
 
 ```bash
-EXPO_PUBLIC_API_URL=http://<your-mac-ip>:8787 pnpm start
+EXPO_PUBLIC_API_URL=http://<your-mac-ip>:8787 pnpm dev
 ```
 
 Keys live in `.env` (see `.env.example`): `GEMINI_API_KEY` (Tier 1 project), `OPENROUTER_API_KEY`, and the LangSmith settings (EU endpoint). The project `.env` overrides anything exported in your shell.

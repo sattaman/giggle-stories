@@ -7,7 +7,6 @@
     "node": ">=22.18"
   },
   "scripts": {
-    "start": "turbo run dev",
     "dev": "turbo run dev",
     "typecheck": "pnpm -r --parallel run typecheck",
     "typecheck:compat": "pnpm -r --parallel run typecheck:compat",

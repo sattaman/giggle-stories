@@ -12,7 +12,7 @@ Plan: `docs/plan.md`. Verified API notes: `docs/research/`. Decisions: `docs/adr
 - `packages/client`: Expo (web now, iOS/Android later) child UI.
 
 ## Commands
-- `pnpm start`: Turborepo runs each app's `dev` task (API on 8787 with `tsx watch`, Expo web on 8082). Port 8081 belongs to another project's Expo.
+- `pnpm dev`: Turborepo runs each app's `dev` task (API on 8787 with `tsx watch`, Expo web on 8082). Port 8081 belongs to another project's Expo.
 - `pnpm check`: typecheck (TS7 `tsc` + TS6 `tsc6`), ESLint (zero warnings) and all tests. It must pass before committing.
 - `pnpm --filter @storytime/<pkg> test`, `… typecheck`.
 - `packages/adapters/scripts/live-check.ts`: live LLM smoke test (costs pennies). Run it with `node_modules/.bin/tsx`.
