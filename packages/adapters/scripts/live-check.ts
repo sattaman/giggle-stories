@@ -3,7 +3,7 @@
 import { readFileSync } from "node:fs";
 import { parseEnv } from "node:util";
 import { StoryWriter } from "@storytime/app";
-import { DEFAULT_MODELS, OpenRouterStructuredModel } from "../src/index.ts";
+import { DEFAULT_MODELS, OpenRouterStructuredModel, flushTraces } from "../src/index.ts";
 
 Object.assign(process.env, parseEnv(readFileSync(new URL("../../../.env", import.meta.url), "utf8")));
 const log = {
@@ -29,3 +29,4 @@ const outline = await writer.outline(brief, cast);
 console.log("OUTLINE", outline.storyTitle, "\n" + outline.pages.map((p) => `${String(p.page)}. ${p.beat}  [${p.funnyMoment}]`).join("\n"));
 const script = await writer.writePage(brief, cast, outline, 1);
 console.log("PAGE 1\n" + script.segments.map((s) => `${s.speaker.padEnd(12)} [${s.style}] ${s.text}`).join("\n"));
+await flushTraces(); // traces are sent in the background; don't exit before they are

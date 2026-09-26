@@ -253,6 +253,27 @@ describe("GraphStoryService", () => {
     expect((await settled(third.stories, id)).pending?.kind).toBe("outline_review");
   });
 
+  it("drains a run at the next step on shutdown, and the next server carries it on", async () => {
+    const store = storage();
+    const gate = controllableModel({ holdOn: "outline" });
+    const first = service({ model: gate.model, store });
+    const { id } = await first.stories.start("Pip", "5-8");
+    await settled(first.stories, id);
+    await first.stories.reply(id, { kind: "answer", text: "Moon cheese" });
+    await until(first.stories, id, (view) => view.stage === "outlining");
+
+    const stopped = first.stories.shutdown();
+    gate.release(); // the current step (voices + outline) finishes; the page isn't started
+    await stopped;
+    expect(gate.calls).not.toContain("write_page");
+
+    const next = controllableModel();
+    const restarted = service({ model: next.model, store });
+    await restarted.stories.recover();
+    expect((await settled(restarted.stories, id)).pending?.kind).toBe("outline_review");
+    expect(next.calls).toEqual(["write_page"]); // carried on from the page, nothing repeated
+  });
+
   it("leaves waiting and finished stories alone on restart", async () => {
     const store = storage();
     const first = service({ store });

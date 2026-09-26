@@ -13,6 +13,7 @@ import {
   tracedSpeech,
   tracedTranscriber,
   tracedVoices,
+  flushTraces,
 } from "@storytime/adapters";
 import { SqliteSaver } from "@langchain/langgraph-checkpoint-sqlite";
 import Database from "better-sqlite3";
@@ -74,6 +75,22 @@ const app = await buildHttp({
 });
 await app.listen({ port: config.PORT, host: config.HOST });
 await stories.recover(); // carries on stories the last process left mid-run
+
+/** Planned stop: finish each story's current step, save it, flush traces, exit. */
+const SHUTDOWN_DEADLINE_MS = 60_000;
+let stopping = false;
+async function shutdown(signal: string): Promise<void> {
+  if (stopping) return;
+  stopping = true;
+  log.info({ signal }, "shutting down; draining stories");
+  await app.close(); // stop taking requests
+  // A step that won't finish in time is simply resumed by recover() on the next start.
+  await Promise.race([stories.shutdown(), new Promise((resolve) => setTimeout(resolve, SHUTDOWN_DEADLINE_MS))]);
+  await flushTraces();
+  db.close();
+  process.exit(0);
+}
+for (const signal of ["SIGTERM", "SIGINT"] as const) process.once(signal, () => void shutdown(signal));
 void narration.prepare(); // one-off TTS in the background; cached on disk afterwards
 void ensureVoiceLibrary(voices, config.DATA_DIR, log, voiceLibrary);
 log.info(

@@ -99,6 +99,14 @@ TTS calls.
 was `view()` reading the checkpoint before the in-memory run state; it now reads run state
 first. A test covers it.)
 
+### 8. Planned shutdown
+
+On SIGTERM or SIGINT the server stops taking requests, then drains each run with LangGraph's
+`RunControl` (one per run): the run finishes its current step, saves a checkpoint and stops
+with `GraphDrained`. A drained run stays `running` in `story_runs` with its automatic-resume
+count reset, so `recover()` carries it on at the next start. A step that doesn't finish within
+60 seconds is cut off, and recovered like a crash.
+
 ## Implementation
 
 - `packages/server/src/run-store.ts`: `SqliteRunStore`, a `story_runs` table in the

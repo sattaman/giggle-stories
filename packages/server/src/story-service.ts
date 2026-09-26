@@ -3,11 +3,12 @@
 //
 // Recovery (ADR 0002): run status is durable (RunStore). A failed run can be carried on
 // with retry(); after a restart, recover() resumes runs that were in flight, once.
+// shutdown() drains runs at the next step boundary so a planned restart loses nothing.
 
 import { randomUUID } from "node:crypto";
 import { StoryProgress, type Logger, type StoryDeps, type StoryGraph } from "@storytime/app";
 import type { AgeBand, ReplyBody, StoryStage, StorySummary, StoryView } from "@storytime/domain";
-import { Command } from "@langchain/langgraph";
+import { Command, RunControl, isGraphDrained } from "@langchain/langgraph";
 import { z } from "zod";
 import type { RunStore } from "./run-store.ts";
 import type { StoryIndex } from "./story-index.ts";
@@ -55,6 +56,8 @@ export interface StoryService {
 
 export class GraphStoryService implements StoryService {
   private readonly live = new Map<string, MutableProgress>();
+  /** Runs in flight: how to drain each one, and when it has settled. */
+  private readonly active = new Map<string, { readonly control: RunControl; readonly settled: Promise<void> }>();
 
   constructor(
     private readonly graph: StoryGraph,
@@ -154,6 +157,16 @@ export class GraphStoryService implements StoryService {
     }
   }
 
+  /**
+   * Call on SIGTERM. Each run finishes its current step, saves a checkpoint and stops
+   * (GraphDrained); it stays "running" in the RunStore, so recover() carries it on at the next
+   * start. Resolves when every run has stopped.
+   */
+  async shutdown(): Promise<void> {
+    for (const { control } of this.active.values()) control.requestDrain("server shutting down");
+    await Promise.allSettled([...this.active.values()].map((run) => run.settled));
+  }
+
   // ── internals ──
 
   /** Runs the graph, folding its custom-stream progress events into the live view. */
@@ -204,7 +217,8 @@ export class GraphStoryService implements StoryService {
         : input.kind === "resume"
           ? new Command({ resume: input.value })
           : null; // carry on from the last checkpoint
-    this.stream(id, progress, graphInput, {
+    const control = new RunControl();
+    const settled = this.stream(id, progress, graphInput, {
       configurable: { thread_id: id },
       context: { deps: this.deps },
       metadata: { thread_id: id }, // groups the whole story as one LangSmith thread
@@ -213,12 +227,19 @@ export class GraphStoryService implements StoryService {
       // Save each step's checkpoint before the next step starts. With the default "async" it's
       // written in the background, and a crash could lose the last finished step (ADR 0002).
       durability: "sync",
+      control,
     })
       .then(() => {
         this.runs.clear(id);
         this.log.info({ storyId: id, ms: Math.round(performance.now() - started) }, "story step finished");
       })
       .catch((error: unknown) => {
+        if (isGraphDrained(error)) {
+          // Stopped cleanly for a shutdown: not a failure, and not a crash-loop resume either.
+          this.runs.markRunning(id, { automatic: false });
+          this.log.info({ storyId: id }, "story drained for shutdown; will resume on restart");
+          return;
+        }
         this.runs.markFailed(id, error instanceof Error ? error.message : String(error));
         this.log.error({ storyId: id, error: error instanceof Error ? error.stack : String(error) }, "story step failed");
       })
@@ -226,6 +247,8 @@ export class GraphStoryService implements StoryService {
         progress.busy = false;
         progress.stage = null;
         progress.message = null;
+        this.active.delete(id);
       });
+    this.active.set(id, { control, settled });
   }
 }
