@@ -24,7 +24,7 @@ export function PagePicture({ url, drawing }: { readonly url: string | null; rea
             <Image
               source={{ uri: url }}
               style={styles.image}
-              resizeMode="cover"
+              resizeMode="contain" // never crop: a joke at the edge (the raisin, the spoon) must stay in
               onLoad={() => {
                 Animated.timing(opacity, { toValue: 1, duration: 600, useNativeDriver: true }).start();
               }}

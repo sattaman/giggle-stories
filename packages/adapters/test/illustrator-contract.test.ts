@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Logger } from "@storytime/app";
 import { afterEach, describe, expect, it } from "vitest";
+import sharp from "sharp";
 import { z } from "zod";
 import { FsImageStore } from "../src/fs/fs-image-store.ts";
 import { OpenRouterIllustrator } from "../src/openrouter/illustrator.ts";
@@ -55,14 +56,16 @@ describe("OpenRouterIllustrator", () => {
 });
 
 describe("FsImageStore", () => {
-  it("saves under the story with the right extension and resolves it back safely", async () => {
+  it("stores a web-ready JPEG, at most 1024 px wide, and resolves it back safely", async () => {
     const root = await mkdtemp(join(tmpdir(), "storytime-images-"));
     const store = new FsImageStore(root, "http://localhost:8787/v1/images");
-    expect(await store.save("story_1", "page-1-picture", PNG, "image/png")).toBe("http://localhost:8787/v1/images/story_1/page-1-picture.png");
-    expect([...(await readFile(join(root, "story_1", "page-1-picture.png")))]).toEqual([...PNG]);
-    expect(store.fileFor("story_1", "page-1-picture.png")).toEqual({ path: join(root, "story_1", "page-1-picture.png"), type: "image/png" });
-    expect(store.fileFor("story_1", "../../secret.png")).toBeUndefined();
-    expect(store.fileFor("story_1", "page.svg")).toBeUndefined();
-    await expect(store.save("../etc", "x", PNG, "image/png")).rejects.toThrow("Unsafe");
+    const big = await sharp({ create: { width: 1200, height: 900, channels: 3, background: "#f5a623" } }).png().toBuffer();
+    expect(await store.save("story_1", "page-1-picture", big)).toBe("http://localhost:8787/v1/images/story_1/page-1-picture.jpg");
+    const saved = await sharp(await readFile(join(root, "story_1", "page-1-picture.jpg"))).metadata();
+    expect(saved).toMatchObject({ format: "jpeg", width: 1024, height: 768 });
+    expect(store.fileFor("story_1", "page-1-picture.jpg")).toEqual({ path: join(root, "story_1", "page-1-picture.jpg"), type: "image/jpeg" });
+    expect(store.fileFor("story_1", "../../secret.jpg")).toBeUndefined();
+    expect(store.fileFor("story_1", "page.png")).toBeUndefined();
+    await expect(store.save("../etc", "x", big)).rejects.toThrow("Unsafe");
   });
 });

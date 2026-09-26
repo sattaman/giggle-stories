@@ -43,7 +43,8 @@ export class OpenRouterIllustrator implements Illustrator {
     const response = await fetch(`${this.baseURL}/images`, {
       method: "POST",
       headers: { authorization: `Bearer ${this.apiKey}`, "content-type": "application/json", "x-title": "Storytime" },
-      // A 4:3 page picture at 1K is plenty for a tablet screen.
+      // A 4:3 page picture at 1K is plenty for a tablet screen. (The image store re-encodes to a
+      // small JPEG: gemini-3.1-flash-image ignores output_format and returns PNG.)
       body: JSON.stringify({ model: this.model, prompt: request.prompt, n: 1, aspect_ratio: "4:3", resolution: "1K" }),
       ...(request.signal === undefined ? {} : { signal: request.signal }),
     });
