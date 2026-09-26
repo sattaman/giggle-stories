@@ -6,7 +6,7 @@ import type { Transcriber } from "@storytime/app";
 import { ReplyBody, StartStoryBody, type NarrationClips, type StoryList, type TranscriptionResult } from "@storytime/domain";
 import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
-import Fastify, { type FastifyBaseLogger, type FastifyInstance } from "fastify";
+import Fastify, { type FastifyBaseLogger, type FastifyInstance, type FastifyReply } from "fastify";
 import { z } from "zod";
 import { StoryConflictError, StoryNotFoundError, type StoryService } from "./story-service.ts";
 
@@ -32,7 +32,23 @@ export interface HttpDeps {
   readonly transcriber: Transcriber;
   readonly narration: () => NarrationClips;
   readonly audioPath: (storyId: string, file: string) => string | undefined;
+  /** The picture file for a story and file name, and its type; undefined if unsafe. */
+  readonly imageFile: (storyId: string, file: string) => { readonly path: string; readonly type: string } | undefined;
   readonly logger: FastifyBaseLogger | false;
+}
+
+/** Streams a generated file. Names never change content, so clients may cache forever. */
+async function sendFile(reply: FastifyReply, path: string, type: string): Promise<FastifyReply> {
+  try {
+    const info = await stat(path);
+    return await reply
+      .type(type)
+      .header("content-length", info.size)
+      .header("cache-control", "public, max-age=31536000, immutable")
+      .send(createReadStream(path));
+  } catch {
+    return reply.code(404).send({ error: "Not found" });
+  }
 }
 
 export async function buildHttp(deps: HttpDeps): Promise<FastifyInstance> {
@@ -97,17 +113,13 @@ export async function buildHttp(deps: HttpDeps): Promise<FastifyInstance> {
   app.get("/v1/audio/:story/:file", async (request, reply) => {
     const { story, file } = parseRequest(AudioParams, request.params);
     const path = deps.audioPath(story, file);
-    if (path === undefined) return reply.code(404).send({ error: "Not found" });
-    try {
-      const info = await stat(path);
-      return await reply
-        .type("audio/wav")
-        .header("content-length", info.size)
-        .header("cache-control", "public, max-age=31536000, immutable")
-        .send(createReadStream(path));
-    } catch {
-      return reply.code(404).send({ error: "Not found" });
-    }
+    return path === undefined ? reply.code(404).send({ error: "Not found" }) : sendFile(reply, path, "audio/wav");
+  });
+
+  app.get("/v1/images/:story/:file", async (request, reply) => {
+    const { story, file } = parseRequest(AudioParams, request.params);
+    const image = deps.imageFile(story, file);
+    return image === undefined ? reply.code(404).send({ error: "Not found" }) : sendFile(reply, image.path, image.type);
   });
 
   return app;

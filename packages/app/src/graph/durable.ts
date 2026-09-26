@@ -19,7 +19,15 @@
 import { task } from "@langchain/langgraph";
 import type { z } from "zod";
 import type { Limiter } from "../concurrency.ts";
-import { VoiceRejectedError, type AudioStore, type SpeechSynthesizer, type StructuredModel, type VoiceDesigner } from "../ports.ts";
+import {
+  VoiceRejectedError,
+  type AudioStore,
+  type ImageStore,
+  type Illustrator,
+  type SpeechSynthesizer,
+  type StructuredModel,
+  type VoiceDesigner,
+} from "../ports.ts";
 
 type GenerateRequest = Parameters<StructuredModel["generate"]>[0];
 
@@ -129,6 +137,22 @@ export const designVoice = task(
       return { ok: true as const, voiceId, previewUrl };
     } catch (error: unknown) {
       return { ...failed(error), rejected: error instanceof VoiceRejectedError };
+    }
+  },
+);
+
+/** Draws a picture and saves it. A failure is tolerated: the story simply has no picture. */
+export const drawPicture = task(
+  "drawPicture",
+  async (
+    ports: { readonly illustrator: Illustrator; readonly images: ImageStore },
+    request: { readonly storyId: string; readonly name: string; readonly prompt: string; readonly signal?: AbortSignal | undefined },
+  ) => {
+    try {
+      const { image, type } = await ports.illustrator.draw({ prompt: request.prompt, signal: request.signal });
+      return { ok: true as const, imageUrl: await ports.images.save(request.storyId, request.name, image, type) };
+    } catch (error: unknown) {
+      return failed(error);
     }
   },
 );

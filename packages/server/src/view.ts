@@ -34,6 +34,7 @@ export const PersistedStory = z.object({
   outline: Outline.optional(),
   script: PageScript.optional(),
   performance: z.array(PerformedSegment).default([]),
+  illustrationUrl: z.string().nullable().default(null),
 });
 export type PersistedStory = z.infer<typeof PersistedStory>;
 
@@ -108,6 +109,7 @@ export function buildView(input: {
     characters: state.cast,
     title: state.outline?.storyTitle ?? null,
     performance,
+    illustrationUrl: state.illustrationUrl,
     error,
     canRetry: status === "error" && resumable,
   };

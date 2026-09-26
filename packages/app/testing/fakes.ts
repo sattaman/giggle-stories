@@ -4,6 +4,8 @@ import type { Cast, ClarificationDecision, Outline, PageScript, StoryBrief } fro
 import {
   VoiceRejectedError,
   type AudioStore,
+  type ImageStore,
+  type Illustrator,
   type Logger,
   type SpeechSynthesizer,
   type StoryDeps,
@@ -92,6 +94,21 @@ export const fakeAudio: AudioStore = {
   save: (storyId, name) => Promise.resolve(`/audio/${storyId}/${name}.wav`),
 };
 
+/** Records each prompt and returns a tiny PNG. */
+export class FakeIllustrator implements Illustrator {
+  readonly prompts: string[] = [];
+  constructor(private readonly fail = false) {}
+  draw(request: { readonly prompt: string }): Promise<{ readonly image: Uint8Array; readonly type: "image/png" }> {
+    this.prompts.push(request.prompt);
+    if (this.fail) return Promise.reject(new Error("image model unavailable"));
+    return Promise.resolve({ image: new Uint8Array([137, 80, 78, 71]), type: "image/png" });
+  }
+}
+
+export const fakeImages: ImageStore = {
+  save: (storyId, name) => Promise.resolve(`/images/${storyId}/${name}.png`),
+};
+
 export const silentLog: Logger = { info: () => undefined, warn: () => undefined, error: () => undefined };
 
 export function deps(overrides: Partial<StoryDeps> & { model: StructuredModel }): StoryDeps {
@@ -99,6 +116,8 @@ export function deps(overrides: Partial<StoryDeps> & { model: StructuredModel })
     voices: new FakeVoices(),
     speech: fakeSpeech,
     audio: fakeAudio,
+    illustrator: new FakeIllustrator(),
+    images: fakeImages,
     log: silentLog,
     narratorVoiceId: "voice_narrator",
     stockVoices: {},

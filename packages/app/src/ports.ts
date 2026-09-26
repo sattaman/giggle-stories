@@ -71,6 +71,21 @@ export interface AudioStore {
   save(storyId: string, name: string, wav: Uint8Array): Promise<string>;
 }
 
+export type ImageType = "image/png" | "image/jpeg" | "image/webp";
+
+/** Draws a picture from a text description. */
+export interface Illustrator {
+  draw(request: { readonly prompt: string; readonly signal?: AbortSignal | undefined }): Promise<{
+    readonly image: Uint8Array;
+    readonly type: ImageType;
+  }>;
+}
+
+export interface ImageStore {
+  /** Stores an image and returns the URL clients should fetch it from. */
+  save(storyId: string, name: string, image: Uint8Array, type: ImageType): Promise<string>;
+}
+
 /** Structured logger (pino-compatible call shape). */
 export interface Logger {
   info(fields: Record<string, unknown>, message: string): void;
@@ -83,6 +98,8 @@ export interface StoryDeps {
   readonly voices: VoiceDesigner;
   readonly speech: SpeechSynthesizer;
   readonly audio: AudioStore;
+  readonly illustrator: Illustrator;
+  readonly images: ImageStore;
   readonly log: Logger;
   readonly narratorVoiceId: string;
   /** Pre-approved designed cartoon voices, used when a character's own design is rejected. */

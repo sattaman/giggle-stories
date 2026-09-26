@@ -5,6 +5,7 @@
 //                                          └→ planOutline → draftPage ─────┴→ reviewOutline ⏸
 //   reviewOutline ─(changes)→ reviseOutline → recast → redraftPage → reviewOutline
 //                 └─(yes!)→ performPage → END
+//                          └→ illustrate  → END   (the page's picture, drawn while it's performed)
 //
 // Page 1 is drafted while voices are designed (both slow), so after "Yes!" the child
 // only waits for the first line of audio.
@@ -41,7 +42,8 @@ import { z } from "zod";
 import { createLimiter } from "../concurrency.ts";
 import type { StoryDeps } from "../ports.ts";
 import { StoryWriter } from "../writer/story-writer.ts";
-import { designVoice, durableModel, speak, tolerantDurableModel } from "./durable.ts";
+import { illustrationPrompt } from "../writer/illustration.ts";
+import { designVoice, drawPicture, durableModel, speak, tolerantDurableModel } from "./durable.ts";
 import { report } from "./progress.ts";
 
 const QuestionAndAnswer = z.object({ question: z.string(), answer: z.string() });
@@ -59,6 +61,8 @@ export const StoryState = new StateSchema({
   outlineFeedback: z.string().optional(),
   script: PageScript.optional(),
   performance: z.array(PerformedSegment).default([]),
+  /** The page-1 picture, or null if drawing it failed (the story works without one). */
+  illustrationUrl: z.string().nullable().default(null),
 });
 export type StoryStateValue = typeof StoryState.State;
 
@@ -319,7 +323,7 @@ const planOutline: Node = async (state, config) => {
 const reviewOutline: Node = (state) => {
   const decision = ask({ kind: "outline_review", outline: required(state.outline, "outline") }, OutlineDecision);
   return decision.approved
-    ? new Command({ update: { outlineFeedback: undefined }, goto: "performPage" })
+    ? new Command({ update: { outlineFeedback: undefined }, goto: ["performPage", "illustrate"] })
     : new Command({ update: { outlineFeedback: decision.feedback }, goto: "reviseOutline" });
 };
 
@@ -376,6 +380,20 @@ const recast: Node = async (state, config) => {
     }),
   );
   return { cast };
+};
+
+/**
+ * Draws the picture for the approved page, from its script, alongside the performance: it
+ * matches what the child hears, and no picture is drawn for a plan that then changes.
+ */
+const illustrate: Node = async (state, config) => {
+  const deps = depsOf(config);
+  const script = required(state.script, "script");
+  const prompt = illustrationPrompt({ brief: required(state.brief, "brief"), cast: state.cast, script, ageBand: state.ageBand });
+  const name = `page-${String(script.page)}-picture`;
+  const drawn = await drawPicture(deps, { storyId: state.storyId, name, prompt, signal: config.signal });
+  if (!drawn.ok) deps.log.warn({ storyId: state.storyId, error: drawn.error }, "picture failed; story continues without one");
+  return { illustrationUrl: drawn.ok ? drawn.imageUrl : null };
 };
 
 const draftPage: Node = async (state, config) => {
@@ -448,8 +466,9 @@ export function buildStoryGraph(options: BuildOptions = {}) {
     .addNode("designVoices", node(designVoices))
     .addNode("planOutline", node(planOutline))
     .addNode("draftPage", node(draftPage))
+    .addNode("illustrate", node(illustrate))
     // Deferred: runs once, after whichever of designVoices / draftPage were scheduled have finished.
-    .addNode("reviewOutline", node(reviewOutline), { ends: ["performPage", "reviseOutline"], defer: true })
+    .addNode("reviewOutline", node(reviewOutline), { ends: ["performPage", "illustrate", "reviseOutline"], defer: true })
     .addNode("reviseOutline", node(reviseOutline))
     .addNode("recast", node(recast))
     // The revision path drafts page 1 again under its own node name. Saved stories can be
@@ -464,12 +483,14 @@ export function buildStoryGraph(options: BuildOptions = {}) {
     .addEdge("castCharacters", "designVoices")
     .addEdge("castCharacters", "planOutline")
     .addEdge("planOutline", "draftPage")
+
     .addEdge("designVoices", "reviewOutline")
     .addEdge("draftPage", "reviewOutline")
     .addEdge("reviseOutline", "recast")
     .addEdge("recast", "redraftPage")
     .addEdge("redraftPage", "reviewOutline")
     .addEdge("performPage", END)
+    .addEdge("illustrate", END)
     .setNodeDefaults({ timeout: { idleTimeout: options.idleTimeoutMs ?? NODE_IDLE_TIMEOUT_MS } });
 }
 
