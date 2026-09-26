@@ -35,6 +35,7 @@
     "typescript": "~6.0.3"
   },
   "scripts": {
+    "dev": "expo start --web --port 8082",
     "start": "expo start",
     "web": "expo start --web",
     "web:mock": "EXPO_PUBLIC_MOCK=1 expo start --web",

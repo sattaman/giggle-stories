@@ -5,7 +5,6 @@ dist/
 .env.*
 !.env.example
 runs/
-spikes/*/out/
 *.tsbuildinfo
 .DS_Store
 .langgraph_api/
@@ -19,3 +18,4 @@ gen-lang-client-*.json
 *-credentials.json
 data/
 packages/client/docs/screenshots/
+.turbo/
