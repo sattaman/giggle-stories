@@ -21,10 +21,10 @@ import { SqliteSaver } from "@langchain/langgraph-checkpoint-sqlite";
 import { Outline, PerformedSegment } from "@storytime/domain";
 import { z } from "zod";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { compileStoryGraph } from "../src/graph/story-graph.ts";
+import { StoryState, compileStoryGraph } from "../src/graph/story-graph.ts";
 import type { SpeechSynthesizer, StoryDeps, StructuredModel, VoiceDesigner } from "../src/ports.ts";
 import { SyntheticModel, syntheticDeps, syntheticStart } from "../testing/synthetic.ts";
-import { FakeVoices, cast } from "../testing/fakes.ts";
+import { FakeVoices, brief, cast, outline } from "../testing/fakes.ts";
 
 const Values = z.object({ outline: Outline.optional(), performance: z.array(PerformedSegment) });
 function countingSpeech(onCall: () => void): SpeechSynthesizer {
@@ -273,5 +273,34 @@ describe("paid calls are durable tasks", () => {
     expect(isInterrupted(review)).toBe(true);
     expect(design.calls.map(([r]) => r.name)).toEqual(["Pip", "Bo", "Bo"]); // Pip's voice was restored
     expect(review.cast.map((c) => c.voice?.voiceId)).toEqual(["voice_pip", "voice_bo"]);
+  });
+});
+
+describe("checkpoints saved by older graph shapes", () => {
+  it("resumes a story saved while waiting for the removed redraftPage node", async () => {
+    // The pre-`defer` graph ran recast → redraftPage → reviewOutline. Recreate a thread paused
+    // just before redraftPage, as a server running that version could have left it.
+    const saver = new MemorySaver();
+    const legacy = new StateGraph(StoryState)
+      .addNode("recast", () => ({}))
+      .addNode("redraftPage", () => ({}))
+      .addEdge(START, "recast")
+      .addEdge("recast", "redraftPage")
+      .addEdge("redraftPage", END)
+      .compile({ checkpointer: saver, interruptBefore: ["redraftPage"] });
+    const thread = { configurable: { thread_id: "legacy" } };
+    await legacy.invoke(
+      { storyId: "legacy", idea: "Pip", brief, cast: cast.characters.map((c) => ({ ...c, voice: { voiceId: "voice_pip", source: "designed" as const, sampleUrl: null } })), outline: outline("Revised plan") },
+      thread,
+    );
+    expect((await legacy.getState(thread)).next).toEqual(["redraftPage"]);
+
+    const current = compileStoryGraph(saver);
+    const config = { ...thread, context: { deps: syntheticDeps() } };
+    expect((await current.getState(config)).next).toEqual(["redraftPage"]);
+    const review = await current.invoke(null, config);
+    if (!isInterrupted(review)) throw new Error("expected the outline review");
+    expect(review[INTERRUPT][0]?.value).toMatchObject({ kind: "outline_review", outline: { storyTitle: "Revised plan" } });
+    expect(review.script?.segments.length).toBeGreaterThan(0);
   });
 });

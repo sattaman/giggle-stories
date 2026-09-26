@@ -3,7 +3,7 @@
 //   START → understand ─(question?)→ askQuestion ⏸ ─→ understand   (max 2 rounds)
 //                └─(ready)→ castCharacters ─┬→ designVoices ────────────────┐
 //                                          └→ planOutline → draftPage ─────┴→ reviewOutline ⏸
-//   reviewOutline ─(changes)→ reviseOutline → recast → draftPage → reviewOutline
+//   reviewOutline ─(changes)→ reviseOutline → recast → redraftPage → reviewOutline
 //                 └─(yes!)→ performPage → END
 //
 // Page 1 is drafted while voices are designed (both slow), so after "Yes!" the child
@@ -452,6 +452,9 @@ export function buildStoryGraph(options: BuildOptions = {}) {
     .addNode("reviewOutline", node(reviewOutline), { ends: ["performPage", "reviseOutline"], defer: true })
     .addNode("reviseOutline", node(reviseOutline))
     .addNode("recast", node(recast))
+    // The revision path drafts page 1 again under its own node name. Saved stories can be
+    // paused at redraftPage, and node names stay stable while they might be (ADR 0002 §5).
+    .addNode("redraftPage", node(draftPage))
     .addNode("performPage", node(performPage))
     .addEdge(START, "understand")
     .addConditionalEdges("understand", (state) => (state.pendingQuestion === undefined ? "castCharacters" : "askQuestion"), [
@@ -464,7 +467,8 @@ export function buildStoryGraph(options: BuildOptions = {}) {
     .addEdge("designVoices", "reviewOutline")
     .addEdge("draftPage", "reviewOutline")
     .addEdge("reviseOutline", "recast")
-    .addEdge("recast", "draftPage")
+    .addEdge("recast", "redraftPage")
+    .addEdge("redraftPage", "reviewOutline")
     .addEdge("performPage", END)
     .setNodeDefaults({ timeout: { idleTimeout: options.idleTimeoutMs ?? NODE_IDLE_TIMEOUT_MS } });
 }
