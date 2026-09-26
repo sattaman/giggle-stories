@@ -22,6 +22,7 @@ Plan: `docs/plan.md`. Verified API notes: `docs/research/`. Decisions: `docs/adr
   - Exception to the skill: `skipLibCheck: true`, so our code is fully checked but third-party `.d.ts` files aren't. No `pnpm patch` or global shims for upstream typing defects (ADR 0001).
 - **Imports:** relative imports use `.ts` extensions (`allowImportingTsExtensions`).
 - **LangGraph:** nodes with side effects (LLM, TTS) must never be interrupt nodes, because a resumed node re-runs from the top. A node can't share a name with a state field.
+  - Every paid call runs as a LangGraph `task` (`packages/app/src/graph/durable.ts`), so a retried or resumed node restores finished calls instead of paying again. Call tasks in a fixed order (they're matched by call order). A task that throws fails the whole run even if caught, so calls whose failure the story tolerates return an outcome (`{ ok: false, error }`) instead.
 - **LLM-facing schemas** stay flat objects: no unions/oneOf (Anthropic structured output rejects them). Keep length limits generous.
 - **Voice Design blocks child-like voice descriptions** (age, kid, young, tiny, sweet, squeaky…). Describe the sound, or use cartoon framing. Fallback chain: rewrite the description, then a catalogue voice.
 - **Env:** `storytime/.env` must override shell env. `~/.zshenv` exports a different, free-tier `GEMINI_API_KEY`.

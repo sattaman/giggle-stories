@@ -22,9 +22,9 @@ import { Outline, PerformedSegment } from "@storytime/domain";
 import { z } from "zod";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { compileStoryGraph } from "../src/graph/story-graph.ts";
-import type { SpeechSynthesizer } from "../src/ports.ts";
+import type { SpeechSynthesizer, StoryDeps, StructuredModel, VoiceDesigner } from "../src/ports.ts";
 import { SyntheticModel, syntheticDeps, syntheticStart } from "../testing/synthetic.ts";
-import { FakeVoices } from "../testing/fakes.ts";
+import { FakeVoices, cast } from "../testing/fakes.ts";
 
 const Values = z.object({ outline: Outline.optional(), performance: z.array(PerformedSegment) });
 function countingSpeech(onCall: () => void): SpeechSynthesizer {
@@ -169,5 +169,109 @@ describe("interrupt nodes re-run from the top on resume", () => {
     const done = await graph.invoke(new Command({ resume: "yes" }), config);
     expect(done.answer).toBe("yes");
     expect(entered).toBe(2); // why the story graph keeps side effects out of askQuestion/reviewOutline
+  });
+});
+
+describe("paid calls are durable tasks", () => {
+  /** Resolves when `release` is called; lets a test stall one provider call until the node times out. */
+  function stall() {
+    let release = (): void => undefined;
+    const released = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    return { released, release };
+  }
+
+  /** Wraps a provider call so the first call matching `shouldStall` never answers. */
+  function stallable<A extends unknown[], R>(fn: (...args: A) => Promise<R>, shouldStall: (...args: A) => boolean) {
+    const gate = stall();
+    let stalled = false;
+    const calls: A[] = [];
+    const wrapped = (...args: A): Promise<R> => {
+      calls.push(args);
+      if (!stalled && shouldStall(...args)) {
+        stalled = true;
+        return gate.released.then(() => Promise.reject(new Error("never answered")));
+      }
+      return fn(...args);
+    };
+    return { wrapped, calls };
+  }
+
+  async function failsThenRetries(deps: StoryDeps, before: (graph: ReturnType<typeof compileStoryGraph>, config: RunConfig) => Promise<void>) {
+    const graph = compileStoryGraph(new MemorySaver(), { idleTimeoutMs: 100 });
+    const config: RunConfig = { configurable: { thread_id: "durable" }, context: { deps } };
+    await before(graph, config);
+    return { graph, config };
+  }
+
+  interface RunConfig {
+    configurable: { thread_id: string };
+    context: { deps: StoryDeps };
+  }
+
+  it("re-synthesises only the unfinished lines when performing the page is retried", async () => {
+    const speech = stallable(
+      (request: Parameters<SpeechSynthesizer["synthesize"]>[0]) => Promise.resolve({ wav: new Uint8Array([request.text.length]), durationMs: 500 }),
+      (request) => request.text === "It was a bad plan.",
+    );
+    const deps = syntheticDeps({ speech: { synthesize: speech.wrapped } });
+    const { graph, config } = await failsThenRetries(deps, async (g, c) => {
+      await g.invoke({ ...syntheticStart, storyId: "durable" }, c);
+      await g.invoke(new Command({ resume: "Moon cheese" }), c);
+    });
+    const before = speech.calls.length;
+
+    // Line 2 never answers, so performPage times out after lines 0, 1 and 3 have been saved.
+    await expect(graph.invoke(new Command({ resume: { approved: true } }), config)).rejects.toBeDefined();
+    expect(speech.calls.length - before).toBe(4);
+
+    // "Try again": the three finished lines are restored from their task results.
+    const done = await graph.invoke(null, config);
+    expect(speech.calls.length - before).toBe(5);
+    expect(speech.calls.at(-1)?.[0].text).toBe("It was a bad plan.");
+    expect(done.performance.every((s) => s.audioUrl !== null)).toBe(true);
+  });
+
+  it("repeats only the unfinished model call when a node is retried", async () => {
+    const inner = new SyntheticModel();
+    const model = stallable(
+      (request: Parameters<StructuredModel["generate"]>[0]): Promise<unknown> => inner.generate(request),
+      (request) => request.task === "decide_clarification",
+    );
+    const stalling: StructuredModel = {
+      generate: async <S extends z.ZodType>(request: Parameters<StructuredModel["generate"]>[0] & { readonly schema: S }) =>
+        request.schema.parse(await model.wrapped(request)),
+    };
+    const { graph, config } = await failsThenRetries(syntheticDeps({ model: stalling }), async (g, c) => {
+      await expect(g.invoke({ ...syntheticStart, storyId: "durable" }, c)).rejects.toBeDefined(); // decide never answers
+    });
+    expect(model.calls.map(([r]) => r.task)).toEqual(["extract_brief", "decide_clarification"]);
+
+    const retried = await graph.invoke(null, config);
+    expect(isInterrupted(retried)).toBe(true);
+    // extract_brief was restored from its task result; only the stalled decision was asked again.
+    expect(model.calls.map(([r]) => r.task)).toEqual(["extract_brief", "decide_clarification", "decide_clarification"]);
+  });
+
+  it("keeps finished characters' voices when voice design is retried", async () => {
+    const bo = { ...cast.characters[0], id: "bo", name: "Bo", hello: "Ribbit!" };
+    const inner = new SyntheticModel();
+    const twoCharacters: StructuredModel = {
+      generate: async (request) => (request.task === "cast_characters" ? request.schema.parse({ characters: [...cast.characters, bo] }) : inner.generate(request)),
+    };
+    const voices = new FakeVoices();
+    const design = stallable((request: Parameters<VoiceDesigner["design"]>[0]) => voices.design(request), (request) => request.name === "Bo");
+    const deps = syntheticDeps({ model: twoCharacters, voices: { design: design.wrapped, fallback: (g, i) => voices.fallback(g, i) } });
+    const { graph, config } = await failsThenRetries(deps, async (g, c) => {
+      await g.invoke({ ...syntheticStart, storyId: "durable" }, c);
+      await expect(g.invoke(new Command({ resume: "Moon cheese" }), c)).rejects.toBeDefined(); // Bo's design never answers
+    });
+    expect(design.calls.map(([r]) => r.name)).toEqual(["Pip", "Bo"]);
+
+    const review = await graph.invoke(null, config);
+    expect(isInterrupted(review)).toBe(true);
+    expect(design.calls.map(([r]) => r.name)).toEqual(["Pip", "Bo", "Bo"]); // Pip's voice was restored
+    expect(review.cast.map((c) => c.voice?.voiceId)).toEqual(["voice_pip", "voice_bo"]);
   });
 });

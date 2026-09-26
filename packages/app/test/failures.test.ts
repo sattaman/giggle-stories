@@ -107,7 +107,13 @@ describe("node timeouts", () => {
     };
     const graph = compileStoryGraph(new MemorySaver(), { idleTimeoutMs: 50 });
     const config = { configurable: { thread_id: "t" }, context: { deps: deps({ model: hung }) } };
-    await expect(graph.invoke({ storyId: "t", idea: "Pip" }, config)).rejects.toBeInstanceOf(NodeTimeoutError);
+    // The model call runs as a task, so the node's timeout and the cancelled call are reported together.
+    const error: unknown = await graph.invoke({ storyId: "t", idea: "Pip" }, config).then(
+      () => undefined,
+      (reason: unknown) => reason,
+    );
+    const errors = error instanceof AggregateError ? error.errors : [error];
+    expect(errors.some((e) => e instanceof NodeTimeoutError)).toBe(true);
     expect(aborted).toBe(true);
     expect((await graph.getState(config)).next).toEqual(["understand"]); // retryable later
   });

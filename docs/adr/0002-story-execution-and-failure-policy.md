@@ -107,5 +107,7 @@ is negligible next to model and TTS calls.
 
 - One small table and a startup reconciliation step.
 - Unfinished stories survive restarts instead of being thrown away.
-- Paid work can still repeat inside a node that crashed. Task 9 narrows that window; it
-  can't close it completely (see the task 3 findings).
+- Paid work that finished before a failure isn't repeated: each provider call is a LangGraph
+  `task`, whose result is checkpointed when it completes (`packages/app/src/graph/durable.ts`).
+  A call that was in flight when the process died is repeated. That window can't be closed,
+  because saving a result and paying for it can't be one atomic step.
