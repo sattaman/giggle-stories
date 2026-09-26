@@ -1,0 +1,18 @@
+{
+  "name": "@storytime/evals",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "pictures": "tsx src/pictures.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "typecheck:compat": "tsc6 -p tsconfig.json"
+  },
+  "dependencies": {
+    "@storytime/adapters": "workspace:*",
+    "@storytime/app": "workspace:*",
+    "@storytime/domain": "workspace:*",
+    "langsmith": "^0.10.5",
+    "sharp": "0.35.4",
+    "zod": "^4.6.5"
+  }
+}
