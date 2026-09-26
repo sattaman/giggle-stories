@@ -7,7 +7,8 @@
     "start": "tsx src/main.ts",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json",
-    "typecheck:compat": "tsc6 -p tsconfig.json"
+    "typecheck:compat": "tsc6 -p tsconfig.json",
+    "audition": "tsx scripts/voice-audition.ts"
   },
   "dependencies": {
     "@fastify/cors": "^11.3.0",
