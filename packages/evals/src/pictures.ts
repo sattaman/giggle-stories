@@ -12,6 +12,7 @@
 import { readFileSync } from "node:fs";
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { parseArgs, parseEnv } from "node:util";
 import { OpenRouterIllustrator } from "@storytime/adapters";
 import { illustrationPrompt, type Logger, type ReferencePicture } from "@storytime/app";
@@ -166,8 +167,12 @@ td{padding:6px;vertical-align:top;border-bottom:1px solid #EADFCB}img{width:260p
 console.log(`\ncontact sheet: ${join(OUT, "index.html")}`);
 
 function sheetRow(model: string, strategy: string, title: string, pictures: readonly string[], scores: Record<string, unknown>): string {
-  const cells = pictures.map((p) => `<td><img src="file://${p}"></td>`).join("");
-  return `<tr><td><b>${title}</b><br>${model}<br><small>${strategy}<br>${JSON.stringify(scores)}</small></td>${cells}</tr>`;
+  const cells = pictures.map((p) => `<td><img src="${escapeHtml(pathToFileURL(p).href)}"></td>`).join("");
+  return `<tr><td><b>${escapeHtml(title)}</b><br>${escapeHtml(model)}<br><small>${escapeHtml(strategy)}<br>${escapeHtml(JSON.stringify(scores))}</small></td>${cells}</tr>`;
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (c) => `&#${String(c.charCodeAt(0))};`);
 }
 
 function slug(value: string): string {
