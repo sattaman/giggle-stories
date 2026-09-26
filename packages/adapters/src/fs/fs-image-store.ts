@@ -30,9 +30,21 @@ export class FsImageStore implements ImageStore {
     return `${this.publicBase}/${storyId}/${file}`;
   }
 
+  /** Saves an animated SVG scene as-is (the app has already checked it is safe to show). */
+  async saveScene(storyId: string, name: string, svg: string): Promise<string> {
+    if (!SAFE.test(storyId) || !SAFE.test(name)) throw new Error(`Unsafe image path: ${storyId}/${name}`);
+    const dir = join(this.root, storyId);
+    await mkdir(dir, { recursive: true });
+    const file = `${name}.svg`;
+    await writeFile(join(dir, `${file}.tmp`), svg, "utf8");
+    await rename(join(dir, `${file}.tmp`), join(dir, file));
+    return `${this.publicBase}/${storyId}/${file}`;
+  }
+
   /** The file to serve for a URL's story and file name, and its type; undefined if unsafe. */
-  fileFor(storyId: string, file: string): { readonly path: string; readonly type: ImageType } | undefined {
-    if (!SAFE.test(storyId) || !/^[a-zA-Z0-9_-]+\.jpg$/.test(file)) return undefined;
-    return { path: join(this.root, storyId, file), type: "image/jpeg" };
+  fileFor(storyId: string, file: string): { readonly path: string; readonly type: ImageType | "image/svg+xml" } | undefined {
+    const extension = /^[a-zA-Z0-9_-]+\.(jpg|svg)$/.exec(file)?.[1];
+    if (!SAFE.test(storyId) || extension === undefined) return undefined;
+    return { path: join(this.root, storyId, file), type: extension === "svg" ? "image/svg+xml" : "image/jpeg" };
   }
 }

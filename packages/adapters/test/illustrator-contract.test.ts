@@ -9,6 +9,7 @@ import sharp from "sharp";
 import { z } from "zod";
 import { FsImageStore } from "../src/fs/fs-image-store.ts";
 import { OpenRouterIllustrator } from "../src/openrouter/illustrator.ts";
+import { OpenRouterSceneDrawer } from "../src/openrouter/scene-drawer.ts";
 import { fakeOpenRouter, httpError, type ChatReply } from "./fake-openrouter.ts";
 
 const PNG = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
@@ -67,5 +68,38 @@ describe("FsImageStore", () => {
     expect(store.fileFor("story_1", "../../secret.jpg")).toBeUndefined();
     expect(store.fileFor("story_1", "page.png")).toBeUndefined();
     await expect(store.save("../etc", "x", big)).rejects.toThrow("Unsafe");
+  });
+});
+
+describe("OpenRouterSceneDrawer", () => {
+  const answer = (content: string): ChatReply => ({
+    status: 200,
+    body: { id: "gen-1", choices: [{ index: 0, message: { role: "assistant", content }, finish_reason: "stop" }], usage: { completion_tokens: 3000, cost: 0.0065 } },
+  });
+
+  it("asks for medium reasoning and returns the answer's svg block", async () => {
+    const fake = await fakeOpenRouter(() => answer('<plan>Biscuit behind a raisin</plan>\n```svg\n<svg viewBox="0 0 800 600"></svg>\n```'));
+    close = fake.close;
+    const drawer = new OpenRouterSceneDrawer("test-key", log, { baseURL: fake.baseURL, model: "test/text" });
+    await expect(drawer.draw({ prompt: "Draw Biscuit" })).resolves.toEqual({ svg: '<svg viewBox="0 0 800 600"></svg>' });
+    expect(z.object({ model: z.string(), reasoning: z.object({ effort: z.string() }) }).parse(fake.requests[0])).toMatchObject({ model: "test/text", reasoning: { effort: "medium" } });
+    expect(logged.at(-1)).toMatchObject({ model: "test/text", costUsd: 0.0065 });
+  });
+
+  it("fails when the answer has no svg", async () => {
+    const fake = await fakeOpenRouter(() => answer("Sorry, I can't draw that."));
+    close = fake.close;
+    await expect(new OpenRouterSceneDrawer("k", log, { baseURL: fake.baseURL }).draw({ prompt: "x" })).rejects.toThrow("no ```svg block");
+  });
+});
+
+describe("FsImageStore scenes", () => {
+  it("saves an SVG scene as-is and serves it as image/svg+xml", async () => {
+    const root = await mkdtemp(join(tmpdir(), "storytime-scenes-"));
+    const store = new FsImageStore(root, "http://localhost:8787/v1/images");
+    const svg = '<svg viewBox="0 0 8 6"></svg>';
+    expect(await store.saveScene("story_1", "page-1-scene", svg)).toBe("http://localhost:8787/v1/images/story_1/page-1-scene.svg");
+    expect(await readFile(join(root, "story_1", "page-1-scene.svg"), "utf8")).toBe(svg);
+    expect(store.fileFor("story_1", "page-1-scene.svg")).toMatchObject({ type: "image/svg+xml" });
   });
 });

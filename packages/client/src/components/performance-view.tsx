@@ -1,4 +1,4 @@
-import type { Character, Performance } from "@storytime/domain";
+import type { Character, Performance, StoryView } from "@storytime/domain";
 import { StyleSheet, Text, View } from "react-native";
 import { castOf, memberFor } from "../story/cast.ts";
 import { displayText } from "../story/lines.ts";
@@ -18,15 +18,15 @@ export interface PerformanceViewProps {
   readonly performance: Performance;
   readonly characters: readonly Character[];
   readonly title: string | null;
-  /** The page's picture; null until it's drawn (or if drawing failed). */
-  readonly illustrationUrl: string | null;
-  /** Still being drawn: show a placeholder frame. */
+  /** The page's pictures (painted, animated); a null url is still being drawn or failed. */
+  readonly pictures: StoryView["pictures"];
+  /** The page is still being worked on, so missing pictures may yet arrive. */
   readonly drawing: boolean;
   readonly onAnotherStory: () => void;
 }
 
 /** The story page: plays each line in order, lighting up whoever is speaking. */
-export function PerformanceView({ performance, characters, title, illustrationUrl, drawing, onAnotherStory }: PerformanceViewProps) {
+export function PerformanceView({ performance, characters, title, pictures, drawing, onAnotherStory }: PerformanceViewProps) {
   const playback = usePlayback(performance);
   const narration = useNarration();
   const { state, segments } = playback;
@@ -48,7 +48,7 @@ export function PerformanceView({ performance, characters, title, illustrationUr
   return (
     <View style={styles.stack}>
       {title !== null && <Text style={text.heading}>{title}</Text>}
-      <PagePicture url={illustrationUrl} drawing={drawing} />
+      <PagePicture pictures={pictures} drawing={drawing} />
       <CastRow cast={cast} speakingId={speakingId} compact />
 
       {state.phase === "ready" && (

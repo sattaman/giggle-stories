@@ -25,27 +25,33 @@ export function illustrationPrompt(input: {
   readonly ageBand: AgeBand;
 }): string {
   const { brief, cast, script, ageBand } = input;
-  // The child's own words about each character decide how they look (species, colour, clothes).
-  const detailsOf = new Map(brief.characters.map((c) => [c.name.toLowerCase(), c.details]));
-  const nameOf = new Map(cast.map((c) => [c.id, c.name]));
-  const characters = cast.map((c) => {
-    const details = detailsOf.get(c.name.toLowerCase());
-    return `- ${c.name} ${c.emoji}: ${[details, c.personality].filter((part) => part !== undefined && part !== "").join("; ")}`;
-  });
-  // The page as it will be heard, so the picture shows its moment rather than a summary.
-  const page = script.segments.map((s) => `${s.speaker === "narrator" ? "Narrator" : (nameOf.get(s.speaker) ?? s.speaker)}: ${stripTags(s.text)}`);
   return [
     STYLE,
     MOOD[ageBand],
     `Story: ${brief.premise}`,
     brief.setting === "" ? "" : `Setting: ${brief.setting}.`,
     "Characters (draw each exactly as described, and the same way every time):",
-    ...characters,
+    ...charactersAsDescribed(brief, cast),
     `Draw the single funniest or most exciting moment of this page, with the characters in it:`,
-    ...page,
+    ...pageAsHeard(cast, script),
   ]
     .filter((line) => line !== "")
     .join("\n");
+}
+
+/** Each character with the child's own words about them (species, colour, clothes) and personality. */
+export function charactersAsDescribed(brief: StoryBrief, cast: readonly CharacterProfile[]): string[] {
+  const detailsOf = new Map(brief.characters.map((c) => [c.name.toLowerCase(), c.details]));
+  return cast.map((c) => {
+    const details = detailsOf.get(c.name.toLowerCase());
+    return `- ${c.name} ${c.emoji}: ${[details, c.personality].filter((part) => part !== undefined && part !== "").join("; ")}`;
+  });
+}
+
+/** The page's lines as the child hears them, so a picture shows its moment rather than a summary. */
+export function pageAsHeard(cast: readonly CharacterProfile[], script: PageScript): string[] {
+  const nameOf = new Map(cast.map((c) => [c.id, c.name]));
+  return script.segments.map((s) => `${s.speaker === "narrator" ? "Narrator" : (nameOf.get(s.speaker) ?? s.speaker)}: ${stripTags(s.text)}`);
 }
 
 /** Vocal tags like <giggle> are for the voice actor, not the illustrator. */

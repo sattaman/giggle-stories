@@ -37,7 +37,10 @@ export interface HttpDeps {
   readonly logger: FastifyBaseLogger | false;
 }
 
-/** Streams a generated file. Names never change content, so clients may cache forever. */
+/**
+ * Streams a generated file. Names never change content, so clients may cache forever. The CSP
+ * matters for model-written SVG: even opened directly, it can't run script or load anything.
+ */
 async function sendFile(reply: FastifyReply, path: string, type: string): Promise<FastifyReply> {
   try {
     const info = await stat(path);
@@ -45,6 +48,8 @@ async function sendFile(reply: FastifyReply, path: string, type: string): Promis
       .type(type)
       .header("content-length", info.size)
       .header("cache-control", "public, max-age=31536000, immutable")
+      .header("content-security-policy", "default-src 'none'; style-src 'unsafe-inline'; sandbox")
+      .header("x-content-type-options", "nosniff")
       .send(createReadStream(path));
   } catch {
     return reply.code(404).send({ error: "Not found" });

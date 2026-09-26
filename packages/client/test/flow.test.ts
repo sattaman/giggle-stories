@@ -14,7 +14,7 @@ const base: StoryView = {
   characters: [],
   title: null,
   performance: null,
-  illustrationUrl: null,
+  pictures: [],
   error: null,
   canRetry: false,
 };

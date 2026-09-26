@@ -81,10 +81,20 @@ export interface Illustrator {
   }>;
 }
 
+/** Writes an animated SVG scene (a text model drawing with shapes and CSS animation). */
+export interface SceneDrawer {
+  draw(request: { readonly prompt: string; readonly signal?: AbortSignal | undefined }): Promise<{ readonly svg: string }>;
+}
+
 export interface ImageStore {
   /** Stores an image and returns the URL clients should fetch it from. */
   save(storyId: string, name: string, image: Uint8Array, type: ImageType): Promise<string>;
+  /** Stores a checked, animated SVG scene and returns its URL. */
+  saveScene(storyId: string, name: string, svg: string): Promise<string>;
 }
+
+/** The kinds of picture a page can have: a painted illustration, an animated SVG scene. */
+export type PictureKind = "painted" | "animated";
 
 /** Structured logger (pino-compatible call shape). */
 export interface Logger {
@@ -99,7 +109,10 @@ export interface StoryDeps {
   readonly speech: SpeechSynthesizer;
   readonly audio: AudioStore;
   readonly illustrator: Illustrator;
+  readonly sceneDrawer: SceneDrawer;
   readonly images: ImageStore;
+  /** Which pictures to make for each page (both, for comparing them). */
+  readonly pictures: readonly PictureKind[];
   readonly log: Logger;
   readonly narratorVoiceId: string;
   /** Pre-approved designed cartoon voices, used when a character's own design is rejected. */

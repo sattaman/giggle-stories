@@ -15,7 +15,7 @@ const script = {
   ],
 };
 
-const empty: PersistedStory = { idea: "a rocket", cast: [], performance: [], illustrationUrl: null };
+const empty: PersistedStory = { idea: "a rocket", cast: [], performance: [], pictureKinds: [], illustrationUrl: null, sceneUrl: null };
 
 describe("buildView", () => {
   it("is 'working' with a friendly message while busy", () => {
@@ -86,7 +86,7 @@ describe("http", () => {
     characters: [],
     title: null,
     performance: null,
-    illustrationUrl: null,
+    pictures: [],
     error: null,
     canRetry: false,
   };

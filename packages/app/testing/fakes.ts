@@ -6,6 +6,7 @@ import {
   type AudioStore,
   type ImageStore,
   type Illustrator,
+  type SceneDrawer,
   type Logger,
   type SpeechSynthesizer,
   type StoryDeps,
@@ -107,7 +108,20 @@ export class FakeIllustrator implements Illustrator {
 
 export const fakeImages: ImageStore = {
   save: (storyId, name) => Promise.resolve(`/images/${storyId}/${name}.png`),
+  saveScene: (storyId, name) => Promise.resolve(`/images/${storyId}/${name}.svg`),
 };
+
+export const SCENE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600"><style>@keyframes bob{50%{transform:translateY(-6px)}}#pip{animation:bob 2s infinite}</style><g id="pip"><circle cx="400" cy="300" r="80" fill="#fa0"/></g></svg>`;
+
+/** Records each prompt and answers with a small animated SVG (or a fixed answer). */
+export class FakeSceneDrawer implements SceneDrawer {
+  readonly prompts: string[] = [];
+  constructor(private readonly svg: string | Error = SCENE_SVG) {}
+  draw(request: { readonly prompt: string }): Promise<{ readonly svg: string }> {
+    this.prompts.push(request.prompt);
+    return this.svg instanceof Error ? Promise.reject(this.svg) : Promise.resolve({ svg: this.svg });
+  }
+}
 
 export const silentLog: Logger = { info: () => undefined, warn: () => undefined, error: () => undefined };
 
@@ -117,7 +131,9 @@ export function deps(overrides: Partial<StoryDeps> & { model: StructuredModel })
     speech: fakeSpeech,
     audio: fakeAudio,
     illustrator: new FakeIllustrator(),
+    sceneDrawer: new FakeSceneDrawer(),
     images: fakeImages,
+    pictures: ["painted", "animated"],
     log: silentLog,
     narratorVoiceId: "voice_narrator",
     stockVoices: {},

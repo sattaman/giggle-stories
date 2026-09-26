@@ -34,7 +34,9 @@ export const PersistedStory = z.object({
   outline: Outline.optional(),
   script: PageScript.optional(),
   performance: z.array(PerformedSegment).default([]),
+  pictureKinds: z.array(z.enum(["painted", "animated"])).default([]),
   illustrationUrl: z.string().nullable().default(null),
+  sceneUrl: z.string().nullable().default(null),
 });
 export type PersistedStory = z.infer<typeof PersistedStory>;
 
@@ -109,7 +111,7 @@ export function buildView(input: {
     characters: state.cast,
     title: state.outline?.storyTitle ?? null,
     performance,
-    illustrationUrl: state.illustrationUrl,
+    pictures: state.pictureKinds.map((kind) => ({ kind, url: kind === "painted" ? state.illustrationUrl : state.sceneUrl })),
     error,
     canRetry: status === "error" && resumable,
   };

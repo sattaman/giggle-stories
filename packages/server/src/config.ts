@@ -34,6 +34,10 @@ const Config = z.object({
   STORY_MODEL_CREATIVE: z.string().optional(),
   /** Any OpenRouter image model, e.g. google/gemini-3-pro-image; default in the adapter. */
   STORY_IMAGE_MODEL: z.string().optional(),
+  /** Any OpenRouter text model for animated SVG scenes; default in the adapter. */
+  STORY_SCENE_MODEL: z.string().optional(),
+  /** Which pictures each page gets: painted (~5p), animated SVG (~0.5p), both (for comparing), or none. */
+  STORY_PICTURES: z.enum(["both", "painted", "animated", "none"]).default("both"),
   LOG_PRETTY: z.enum(["true", "false"]).default("true"),
 });
 export type Config = z.infer<typeof Config> & { readonly publicUrl: string };
