@@ -2,7 +2,7 @@
 // LangChain/LangGraph runs are traced automatically; these add Gemini calls to the
 // same trace tree. API keys and audio bytes are never recorded.
 
-import type { Illustrator, SpeechSynthesizer, Transcriber, VoiceDesigner } from "@storytime/app";
+import type { Illustrator, SceneDrawer, SpeechSynthesizer, Transcriber, VoiceDesigner } from "@storytime/app";
 import { awaitAllCallbacks } from "@langchain/core/callbacks/promises";
 import { Client } from "langsmith";
 import { getCurrentRunTree, traceable } from "langsmith/traceable";
@@ -97,6 +97,20 @@ export function tracedIllustrator(inner: Illustrator, model: string): Illustrato
       metadata: { ls_provider: "openrouter", ls_model_name: model },
       processInputs: (request) => ({ prompt: request.prompt }),
       processOutputs: (out) => ({ type: out.type, bytes: out.image.byteLength }),
+    }),
+  };
+}
+
+export function tracedSceneDrawer(inner: SceneDrawer, model: string): SceneDrawer {
+  return {
+    draw: traceable((request: Parameters<SceneDrawer["draw"]>[0]) => inner.draw(request), {
+      name: "draw_scene",
+      run_type: "llm",
+      client: client(),
+      tags: ["image", "svg"],
+      metadata: { ls_provider: "openrouter", ls_model_name: model },
+      processInputs: (request) => ({ prompt: request.prompt }),
+      processOutputs: (out) => ({ bytes: out.svg.length }),
     }),
   };
 }

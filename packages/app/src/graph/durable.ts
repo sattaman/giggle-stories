@@ -19,11 +19,13 @@
 import { task } from "@langchain/langgraph";
 import type { z } from "zod";
 import type { Limiter } from "../concurrency.ts";
+import { svgProblems } from "../writer/scene.ts";
 import {
   VoiceRejectedError,
   type AudioStore,
   type ImageStore,
   type Illustrator,
+  type SceneDrawer,
   type SpeechSynthesizer,
   type StructuredModel,
   type VoiceDesigner,
@@ -151,6 +153,27 @@ export const drawPicture = task(
     try {
       const { image, type } = await ports.illustrator.draw({ prompt: request.prompt, signal: request.signal });
       return { ok: true as const, imageUrl: await ports.images.save(request.storyId, request.name, image, type) };
+    } catch (error: unknown) {
+      return failed(error);
+    }
+  },
+);
+
+/**
+ * Has the text model draw an animated SVG scene, checks it is safe to show, and saves it.
+ * A failure (including an unsafe SVG) is tolerated: the page has no animated scene.
+ */
+export const drawScene = task(
+  "drawScene",
+  async (
+    ports: { readonly sceneDrawer: SceneDrawer; readonly images: ImageStore },
+    request: { readonly storyId: string; readonly name: string; readonly prompt: string; readonly signal?: AbortSignal | undefined },
+  ) => {
+    try {
+      const { svg } = await ports.sceneDrawer.draw({ prompt: request.prompt, signal: request.signal });
+      const problems = svgProblems(svg);
+      if (problems.length > 0) return failed(new Error(`unsafe SVG: ${problems.join(", ")}`));
+      return { ok: true as const, sceneUrl: await ports.images.saveScene(request.storyId, request.name, svg) };
     } catch (error: unknown) {
       return failed(error);
     }

@@ -3,7 +3,7 @@
 
 import type { StructuredModel, StoryDeps } from "../src/ports.ts";
 import { z } from "zod";
-import { FakeIllustrator, FakeVoices, brief, cast, decisions, fakeAudio, fakeImages, fakeSpeech, outline, script, silentLog } from "./fakes.ts";
+import { FakeIllustrator, FakeSceneDrawer, FakeVoices, brief, cast, decisions, fakeAudio, fakeImages, fakeSpeech, outline, script, silentLog } from "./fakes.ts";
 
 const REVISED_TITLE = "Revised plan";
 
@@ -58,7 +58,9 @@ export function syntheticDeps(overrides: Partial<StoryDeps> = {}): StoryDeps {
     speech: fakeSpeech,
     audio: fakeAudio,
     illustrator: new FakeIllustrator(),
+    sceneDrawer: new FakeSceneDrawer(),
     images: fakeImages,
+    pictures: ["painted", "animated"],
     log: silentLog,
     narratorVoiceId: "voice_narrator",
     stockVoices: {},

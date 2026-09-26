@@ -8,6 +8,7 @@ graph TD;
 	planOutline(planOutline)
 	draftPage(draftPage)
 	illustrate(illustrate)
+	animate(animate)
 	reviewOutline(reviewOutline)
 	reviseOutline(reviseOutline)
 	recast(recast)
@@ -15,6 +16,7 @@ graph TD;
 	performPage(performPage)
 	__end__([<p>__end__</p>]):::last
 	__start__ --> understand;
+	animate --> __end__;
 	castCharacters --> designVoices;
 	castCharacters --> planOutline;
 	designVoices --> reviewOutline;
@@ -30,6 +32,7 @@ graph TD;
 	askQuestion -.-> understand;
 	reviewOutline -.-> performPage;
 	reviewOutline -.-> illustrate;
+	reviewOutline -.-> animate;
 	reviewOutline -.-> reviseOutline;
 	classDef default fill:#f2f0ff,line-height:1.2;
 	classDef first fill-opacity:0;

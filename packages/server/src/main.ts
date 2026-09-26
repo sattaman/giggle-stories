@@ -7,7 +7,9 @@ import {
   FsAudioStore,
   FsImageStore,
   OpenRouterIllustrator,
+  OpenRouterSceneDrawer,
   tracedIllustrator,
+  tracedSceneDrawer,
   GeminiSpeech,
   GeminiTranscriber,
   GeminiVoiceDesigner,
@@ -56,6 +58,10 @@ const model = new OpenRouterStructuredModel(config.OPENROUTER_API_KEY, log, {
 const illustrator = new OpenRouterIllustrator(config.OPENROUTER_API_KEY, log, {
   ...(config.STORY_IMAGE_MODEL === undefined ? {} : { model: config.STORY_IMAGE_MODEL }),
 });
+const sceneDrawer = new OpenRouterSceneDrawer(config.OPENROUTER_API_KEY, log, {
+  ...(config.STORY_SCENE_MODEL === undefined ? {} : { model: config.STORY_SCENE_MODEL }),
+});
+const PICTURES = { both: ["painted", "animated"], painted: ["painted"], animated: ["animated"], none: [] } as const;
 const images = new FsImageStore(join(config.DATA_DIR, "images"), `${config.publicUrl}/v1/images`);
 
 const narratorVoiceId = await ensureNarratorVoice(voices, config.DATA_DIR, log);
@@ -74,7 +80,9 @@ const stories = new GraphStoryService(
     speech,
     audio,
     illustrator: tracedIllustrator(illustrator, illustrator.model),
+    sceneDrawer: tracedSceneDrawer(sceneDrawer, sceneDrawer.model),
     images,
+    pictures: PICTURES[config.STORY_PICTURES],
     log,
     narratorVoiceId,
     stockVoices,

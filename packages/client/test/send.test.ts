@@ -14,7 +14,7 @@ const view = (status: StoryView["status"]): StoryView => ({
   characters: [],
   title: null,
   performance: null,
-  illustrationUrl: null,
+  pictures: [],
   error: null,
   canRetry: status === "error",
 });
