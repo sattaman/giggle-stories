@@ -100,10 +100,12 @@ export const CAST = `Create the cast for this story.
   GOOD (grown-up): "A booming, pompous, old-fashioned male English aristocrat's voice, theatrical and easily offended."
   GOOD (creature): "A gravelly, grumbling, slow male voice with a Scottish accent, secretly soft-hearted."
   BAD (blocked): "A cheeky eleven-year-old girl." / "A tiny, sweet, squeaky voice." / "A young boy's voice."
-- voiceArchetype: pick the ready-made voice that fits best, matching gender. Kid characters: kid-hero-* for the
-  main/brave ones, kid-cheeky-* for mischievous ones. Parents: mum/dad. Grandparents: granny/grandad. Baddies:
-  villain-*. Pets/animals: animal-female, creature-male or creature-neutral. Machines: robot.
-  Give different characters different archetypes where possible.
+- voiceArchetype: pick the ready-made voice that fits best, matching gender. Kid characters (the child's friends,
+  classmates, siblings, rivals) always get a kid-* voice: kid-hero-* for the main/brave ones, kid-cheeky-* for
+  mischievous ones, kid-posh-* for prim, bossy, show-off or snooty ones, kid-rough-* for tough, blunt, sporty or
+  scrappy ones. A kid who is mean or bossy is still a kid: use kid-posh-* or kid-rough-*, never villain-*.
+  Parents: mum/dad. Grandparents: granny/grandad. Grown-up baddies only: villain-*. Pets/animals: animal-female,
+  creature-male or creature-neutral. Machines: robot. Give different characters different archetypes where possible.
 - gender: "female" or "male" whenever the character has one (use the brief's gender for the child's characters).
   Use "neutral" only for characters that genuinely have none (objects, robots, some creatures) or when the
   child's character's gender is unknown.`;

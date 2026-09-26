@@ -19,11 +19,19 @@ const STOCK_DESCRIPTIONS: Record<Gender, string> = {
 };
 
 /** Ready-made voices by archetype. Gender stated plainly; no child wording (Voice Design rules). */
-const LIBRARY: Record<VoiceArchetype, { readonly gender: Gender; readonly description: string }> = {
+export const LIBRARY: Record<VoiceArchetype, { readonly gender: Gender; readonly description: string }> = {
   "kid-hero-female": { gender: "female", description: STOCK_DESCRIPTIONS.female },
   "kid-cheeky-female": {
     gender: "female",
     description: "A bright, quick, mischievous female cartoon heroine's voice with a cheeky giggle in it, with a British accent.",
+  },
+  "kid-posh-female": {
+    gender: "female",
+    description: "A high, bright, crisp animated-character voice with a very posh British accent, prim, precise and bossy, every word perfectly pronounced.",
+  },
+  "kid-rough-female": {
+    gender: "female",
+    description: "A high, bright, slightly husky animated-character voice with a broad Yorkshire accent, blunt, tough and full of beans.",
   },
   mum: { gender: "female", description: "A warm, kind, gently humorous female voice, calm and reassuring, with a British accent." },
   granny: {
@@ -42,6 +50,14 @@ const LIBRARY: Record<VoiceArchetype, { readonly gender: Gender; readonly descri
   "kid-cheeky-male": {
     gender: "male",
     description: "A scratchy, mischievous male cartoon voice, fast-talking and full of schemes, with a London accent.",
+  },
+  "kid-posh-male": {
+    gender: "male",
+    description: "A high, bright, clipped animated-character voice with a very posh British accent, pompous, show-offy and easily outraged.",
+  },
+  "kid-rough-male": {
+    gender: "male",
+    description: "A raspy, fast-talking male cartoon voice with a broad Mancunian accent, loud, blunt and cheeky.",
   },
   dad: { gender: "male", description: "A friendly, slightly goofy male voice, warm and upbeat, who loves a bad joke, with a British accent." },
   grandad: { gender: "male", description: "A jolly, gravelly elderly male voice, slow and chuckling, with a West Country accent." },
