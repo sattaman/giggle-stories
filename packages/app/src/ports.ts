@@ -1,7 +1,7 @@
 // Driven ports: everything the story engine needs from the outside world.
 // Adapters (OpenRouter, Gemini, filesystem…) implement these; tests use fakes.
 
-import type { StoryStage, VoiceArchetype } from "@storytime/domain";
+import type { VoiceArchetype } from "@storytime/domain";
 import type { z } from "zod";
 
 /** A language model that returns data matching a zod schema. */
@@ -68,15 +68,6 @@ export interface AudioStore {
   save(storyId: string, name: string, wav: Uint8Array): Promise<string>;
 }
 
-/** Lets long-running nodes report progress to whoever is watching the story. */
-export interface ProgressSink {
-  stage(storyId: string, stage: StoryStage, message: string): void;
-  segmentPerformed(
-    storyId: string,
-    segment: { readonly index: number; readonly audioUrl: string; readonly durationMs: number },
-  ): void;
-}
-
 /** Structured logger (pino-compatible call shape). */
 export interface Logger {
   info(fields: Record<string, unknown>, message: string): void;
@@ -89,7 +80,6 @@ export interface StoryDeps {
   readonly voices: VoiceDesigner;
   readonly speech: SpeechSynthesizer;
   readonly audio: AudioStore;
-  readonly progress: ProgressSink;
   readonly log: Logger;
   readonly narratorVoiceId: string;
   /** Pre-approved designed cartoon voices, used when a character's own design is rejected. */

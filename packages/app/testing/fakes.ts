@@ -1,11 +1,10 @@
 // In-memory fakes for every port, so the graph can be tested without any LLM or TTS.
 
-import type { Cast, ClarificationDecision, Outline, PageScript, StoryBrief, StoryStage } from "@storytime/domain";
+import type { Cast, ClarificationDecision, Outline, PageScript, StoryBrief } from "@storytime/domain";
 import {
   VoiceRejectedError,
   type AudioStore,
   type Logger,
-  type ProgressSink,
   type SpeechSynthesizer,
   type StoryDeps,
   type StructuredModel,
@@ -93,17 +92,6 @@ export const fakeAudio: AudioStore = {
   save: (storyId, name) => Promise.resolve(`/audio/${storyId}/${name}.wav`),
 };
 
-export class RecordingProgress implements ProgressSink {
-  readonly stages: StoryStage[] = [];
-  readonly segments: number[] = [];
-  stage(_storyId: string, stage: StoryStage): void {
-    this.stages.push(stage);
-  }
-  segmentPerformed(_storyId: string, segment: { index: number }): void {
-    this.segments.push(segment.index);
-  }
-}
-
 export const silentLog: Logger = { info: () => undefined, warn: () => undefined, error: () => undefined };
 
 export function deps(overrides: Partial<StoryDeps> & { model: StructuredModel }): StoryDeps {
@@ -111,7 +99,6 @@ export function deps(overrides: Partial<StoryDeps> & { model: StructuredModel })
     voices: new FakeVoices(),
     speech: fakeSpeech,
     audio: fakeAudio,
-    progress: new RecordingProgress(),
     log: silentLog,
     narratorVoiceId: "voice_narrator",
     stockVoices: {},

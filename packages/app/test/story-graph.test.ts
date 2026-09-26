@@ -1,7 +1,10 @@
 import { Command, INTERRUPT, MemorySaver, isInterrupted } from "@langchain/langgraph";
+import { PerformedSegment } from "@storytime/domain";
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 import { compileStoryGraph } from "../src/graph/story-graph.ts";
-import { FakeModel, FakeVoices, RecordingProgress, brief, cast, decisions, deps, outline, script } from "../testing/fakes.ts";
+import { StoryProgress } from "../src/graph/progress.ts";
+import { FakeModel, FakeVoices, brief, cast, decisions, deps, outline, script } from "../testing/fakes.ts";
 
 const pipAsBoy = {
   characters: cast.characters.map((c) => ({ ...c, gender: "male", voiceArchetype: "kid-hero-male", voiceDescription: "A bright, bouncy cartoon hero's voice, male." })),
@@ -18,18 +21,17 @@ function setup(options: { decide: unknown[]; rejectVoices?: boolean; recast?: un
     rewrite_voice: [{ voiceDescription: "A bright, bouncy cartoon voice with a British accent." }],
     recast_characters: [options.recast ?? cast],
   });
-  const progress = new RecordingProgress();
   const voices = new FakeVoices(options.rejectVoices ?? false);
   const graph = compileStoryGraph(new MemorySaver());
-  const config = { configurable: { thread_id: "story-1" }, context: { deps: deps({ model, progress, voices, stockVoices: options.stock === true ? { female: "voice_stock_f" } : {}, voiceLibrary: options.library === true ? { "kid-hero-female": "voice_lib_heroine", "kid-hero-male": "voice_lib_hero" } : {} }) } };
-  return { graph, config, model, progress, voices };
+  const config = { configurable: { thread_id: "story-1" }, context: { deps: deps({ model, voices, stockVoices: options.stock === true ? { female: "voice_stock_f" } : {}, voiceLibrary: options.library === true ? { "kid-hero-female": "voice_lib_heroine", "kid-hero-male": "voice_lib_hero" } : {} }) } };
+  return { graph, config, model, voices };
 }
 
 const start = { storyId: "story-1", idea: "Pip builds a rocket" };
 
 describe("story graph", () => {
   it("asks a question, takes changes to the outline, then performs page one", async () => {
-    const { graph, config, model, progress, voices } = setup({ decide: [decisions.ask, decisions.ready], recast: pipAsBoy });
+    const { graph, config, model, voices } = setup({ decide: [decisions.ask, decisions.ready], recast: pipAsBoy });
 
     const first = await graph.invoke(start, config);
     expect(isInterrupted(first)).toBe(true);
@@ -50,11 +52,17 @@ describe("story graph", () => {
     expect(voices.designed).toHaveLength(2);
     expect(third.answers.at(-1)).toEqual({ question: "Changes the child asked for", answer: "Pip is a boy" });
 
-    const done = await graph.invoke(new Command({ resume: { approved: true } }), config);
-    expect(isInterrupted(done)).toBe(false);
+    // Progress arrives on the custom stream while the page is performed.
+    const events: StoryProgress[] = [];
+    for await (const chunk of await graph.stream(new Command({ resume: { approved: true } }), { ...config, streamMode: "custom" })) {
+      events.push(StoryProgress.parse(chunk));
+    }
+    expect(events[0]).toEqual({ kind: "stage", stage: "performing", message: "Warming up the voices…" });
+    expect(events.flatMap((e) => (e.kind === "segment" ? [e.index] : [])).sort()).toEqual([0, 1, 2, 3]);
+
+    const done = await graph.getState(config).then((snapshot) => z.object({ performance: z.array(PerformedSegment) }).parse(snapshot.values));
     expect(done.performance).toHaveLength(script.segments.length);
     expect(done.performance.every((s) => s.audioUrl !== null)).toBe(true);
-    expect(progress.segments.sort()).toEqual([0, 1, 2, 3]);
     expect(model.calls.filter((t) => t === "decide_clarification")).toHaveLength(2);
     // Drafted before review, redrafted after the outline changed; nothing written after "Yes!".
     expect(model.calls.filter((t) => t === "write_page")).toHaveLength(2);

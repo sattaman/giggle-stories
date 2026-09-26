@@ -42,6 +42,7 @@ import { createLimiter } from "../concurrency.ts";
 import type { StoryDeps } from "../ports.ts";
 import { StoryWriter } from "../writer/story-writer.ts";
 import { designVoice, durableModel, speak } from "./durable.ts";
+import { report } from "./progress.ts";
 
 const QuestionAndAnswer = z.object({ question: z.string(), answer: z.string() });
 
@@ -128,7 +129,7 @@ function required<T>(value: T | undefined, what: string): T {
 const understand: Node = async (state, config) => {
   const deps = depsOf(config);
   const writer = writerFor(deps, state, config.signal);
-  deps.progress.stage(state.storyId, "understanding", "Thinking about your idea…");
+  report(config, { kind: "stage", stage: "understanding", message: "Thinking about your idea…" });
 
   const brief = await writer.extractBrief(state.idea, state.answers);
   if (state.answers.length >= MAX_CLARIFICATIONS) return { brief, pendingQuestion: undefined };
@@ -177,7 +178,7 @@ const askQuestion: Node = (state) => {
 
 const castCharacters: Node = async (state, config) => {
   const deps = depsOf(config);
-  deps.progress.stage(state.storyId, "casting", "Meeting your characters…");
+  report(config, { kind: "stage", stage: "casting", message: "Meeting your characters…" });
   const profiles = await writerFor(deps, state, config.signal).cast(required(state.brief, "brief"));
   return { cast: profiles.map((profile) => ({ ...profile })) };
 };
@@ -185,7 +186,7 @@ const castCharacters: Node = async (state, config) => {
 const designVoices: Node = async (state, config) => {
   const deps = depsOf(config);
   const writer = writerFor(deps, state, config.signal);
-  deps.progress.stage(state.storyId, "casting", "Giving everyone a voice…");
+  report(config, { kind: "stage", stage: "casting", message: "Giving everyone a voice…" });
   const picks = pickLibraryVoices(deps, state.cast, new Set());
   const cast = await Promise.all(
     state.cast.map((character, index) => prepareVoice(deps, { writer, signal: config.signal, storyId: state.storyId, character, index, sampleSuffix: "", libraryVoice: picks.get(character.id) })),
@@ -302,7 +303,7 @@ async function voiceFor(
 
 const planOutline: Node = async (state, config) => {
   const deps = depsOf(config);
-  deps.progress.stage(state.storyId, "outlining", "Planning your story…");
+  report(config, { kind: "stage", stage: "outlining", message: "Planning your story…" });
   const result = await writerFor(deps, state, config.signal).outline(required(state.brief, "brief"), state.cast);
   return { outline: result };
 };
@@ -317,7 +318,7 @@ const reviewOutline: Node = (state) => {
 const reviseOutline: Node = async (state, config) => {
   const deps = depsOf(config);
   const writer = writerFor(deps, state, config.signal);
-  deps.progress.stage(state.storyId, "outlining", "Changing the plan…");
+  report(config, { kind: "stage", stage: "outlining", message: "Changing the plan…" });
   const feedback = required(state.outlineFeedback, "outlineFeedback");
   // The change is part of the child's brief from now on (e.g. "Rolo is a girl").
   const answers = [...state.answers, { question: "Changes the child asked for", answer: feedback }];
@@ -330,7 +331,7 @@ const reviseOutline: Node = async (state, config) => {
 const recast: Node = async (state, config) => {
   const deps = depsOf(config);
   const writer = writerFor(deps, state, config.signal);
-  deps.progress.stage(state.storyId, "casting", "Updating your characters…");
+  report(config, { kind: "stage", stage: "casting", message: "Updating your characters…" });
   const updated = await writer.recast(
     required(state.brief, "brief"),
     state.cast,
@@ -370,7 +371,7 @@ const recast: Node = async (state, config) => {
 
 const draftPage: Node = async (state, config) => {
   const deps = depsOf(config);
-  deps.progress.stage(state.storyId, "writing", "Getting page one ready…");
+  report(config, { kind: "stage", stage: "writing", message: "Getting page one ready…" });
   const script = await writerFor(deps, state, config.signal).writePage(
     required(state.brief, "brief"),
     state.cast,
@@ -383,7 +384,7 @@ const draftPage: Node = async (state, config) => {
 const performPage: Node = async (state, config) => {
   const deps = depsOf(config);
   const script = required(state.script, "script");
-  deps.progress.stage(state.storyId, "performing", "Warming up the voices…");
+  report(config, { kind: "stage", stage: "performing", message: "Warming up the voices…" });
   const voiceOf = new Map(state.cast.map((c) => [c.id, c.voice?.voiceId]));
   const fallbackOf = new Map(state.cast.map((c, index) => [c.id, deps.voices.fallback(c.gender, index)]));
 
@@ -411,7 +412,7 @@ const performPage: Node = async (state, config) => {
         deps.log.error({ storyId: state.storyId, index, error: spoken.error }, "segment synthesis failed; skipping line");
         return { ...base, audioUrl: null, durationMs: null };
       }
-      deps.progress.segmentPerformed(state.storyId, { index, audioUrl: spoken.audioUrl, durationMs: spoken.durationMs });
+      report(config, { kind: "segment", index, audioUrl: spoken.audioUrl, durationMs: spoken.durationMs });
       return { ...base, audioUrl: spoken.audioUrl, durationMs: spoken.durationMs };
     }),
   );

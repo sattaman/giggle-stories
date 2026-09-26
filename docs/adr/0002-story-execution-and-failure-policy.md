@@ -89,11 +89,15 @@ the graph and ports stay the same.
 
 ### 7. Checkpoint durability
 
-Runs use `durability: "sync"`: each checkpoint is saved before the next step starts and
-before `invoke` resolves. With the default `"async"`, a poll that arrives just as a run
-finishes could read the state without its final writes, and show a working story as
-interrupted. The cost is one SQLite write per superstep on the run's critical path, which
-is negligible next to model and TTS calls.
+Runs use `durability: "sync"`: each step's checkpoint is saved before the next step starts.
+With the default `"async"`, it's written in the background while the next step runs, so a
+crash could lose the last finished step and repeat its paid work on recovery. The cost is one
+SQLite write per superstep on the run's critical path, which is negligible next to model and
+TTS calls.
+
+(An earlier draft blamed `"async"` for stories briefly showing as interrupted. The real cause
+was `view()` reading the checkpoint before the in-memory run state; it now reads run state
+first. A test covers it.)
 
 ## Implementation
 

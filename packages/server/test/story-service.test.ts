@@ -66,7 +66,6 @@ function service(
   options: { model?: StructuredModel; speech?: SpeechSynthesizer; store?: ReturnType<typeof storage> } = {},
 ) {
   const store = options.store ?? storage();
-  // The service replaces `progress` with itself.
   const deps = syntheticDeps({
     ...(options.model === undefined ? {} : { model: options.model }),
     ...(options.speech === undefined ? {} : { speech: options.speech }),
@@ -119,6 +118,29 @@ describe("GraphStoryService", () => {
     expect(done.status).toBe("done");
     expect(done.performance?.segments.every((s) => s.audioUrl !== null)).toBe(true);
     expect((await stories.list()).map((s) => [s.id, s.status])).toEqual([[id, "done"]]);
+  });
+
+  it("shows finished lines while the rest of the page is still being performed", async () => {
+    let release = (): void => undefined;
+    const lastLine = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const speech: SpeechSynthesizer = {
+      synthesize: async (request) => {
+        if (request.text === "<giggle> A brilliant bad plan.") await lastLine;
+        return { wav: new Uint8Array([1]), durationMs: 500 };
+      },
+    };
+    const { stories } = service({ speech });
+    const id = await toOutlineReview(stories);
+    await stories.reply(id, { kind: "outline", approved: true });
+
+    // Progress arrives on the graph's custom stream before the node (and its checkpoint) finishes.
+    const partial = await until(stories, id, (view) => (view.performance?.segments.filter((s) => s.audioUrl !== null).length ?? 0) === 3);
+    expect(partial).toMatchObject({ status: "performing", performance: { complete: false } });
+
+    release();
+    expect(await settled(stories, id)).toMatchObject({ status: "done", performance: { complete: true } });
   });
 
   it("accepts exactly one of two simultaneous approvals and performs the page once", async () => {
