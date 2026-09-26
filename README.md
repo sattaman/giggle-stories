@@ -31,7 +31,7 @@ Built as a real product for one very demanding user (success = she laughs and as
 | Speech | **Gemini 3.8 Flash TTS** (+ **Flash-Lite TTS** fallback) | Expressive, style-directed lines per character. Quota-aware retries, with automatic fallback to the Lite model and then to built-in voices when a daily quota runs out. |
 | Voices | **Gemini Voice Design** | A shared library of 18 designed character voices (4 girls, 4 boys, parents, grandparents, villains, creatures, robot), plus per-story designs. Descriptions name the sound, never an age. |
 | Listening | **Gemini 3.5 Transcribe** | The child's spoken idea and answers. Recordings are transcribed in memory and never stored. |
-| Pictures | **Gemini 3.1 Flash Image** via OpenRouter's Images API | One picture-book illustration per page, drawn from the page the child hears, and stored as a 1024 px JPEG. The model is swappable by config. |
+| Pictures | **Gemini 3.1 Flash Lite Image** via OpenRouter's Images API | One picture-book illustration per page, drawn from the page the child hears, and stored as a 1024 px JPEG. Chosen by LangSmith evals (`packages/evals`): the most consistent across pages, at half the price. Swappable by config. |
 | Observability | **LangSmith** (EU) | Each story is one LangSmith thread: every graph node, LLM call, voice design and TTS line, with its real model and cost. Spoken answers join their story's thread. |
 | API | Fastify, zod | A small `/v1` API. Every boundary is validated (HTTP, env, LLM output, SDK results, even checkpoints). |
 | App | Expo / React Native (web first) | A child-first UI: big buttons, narration, speaking-character highlights and "Try again" that carries a story on. |
@@ -77,7 +77,7 @@ Useful settings:
 | Answer → plan to approve (voices and page 1 are prepared meanwhile) | ~45 s |
 | "Yes!" → first line plays | ~6 s |
 | "Yes!" → picture appears | ~12 s |
-| Cost per story | about 7p: ~5p picture, the rest LLM and speech |
+| Cost per story | about 4p: ~2.5p picture, the rest LLM and speech |
 
 ## Handy commands
 

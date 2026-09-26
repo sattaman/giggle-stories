@@ -6,8 +6,12 @@
 import type { ImageType, Illustrator, Logger, ReferencePicture } from "@storytime/app";
 import { z } from "zod";
 
-/** Cheap, fast and good at following descriptions; overridable with STORY_IMAGE_MODEL. */
-export const DEFAULT_IMAGE_MODEL = "google/gemini-3.1-flash-image";
+/**
+ * Chosen by the picture evals (packages/evals): with page 1 as a reference it was the most consistent
+ * across three-page stories, at half the price ($0.034 a picture) and twice the speed of Flash Image.
+ * Overridable with STORY_IMAGE_MODEL.
+ */
+export const DEFAULT_IMAGE_MODEL = "google/gemini-3.1-flash-lite-image";
 
 const ImagesResponse = z.object({
   data: z
@@ -62,7 +66,7 @@ export class OpenRouterIllustrator implements Illustrator {
       method: "POST",
       headers: { authorization: `Bearer ${this.apiKey}`, "content-type": "application/json", "x-title": "Storytime" },
       // A landscape page picture at about 1K is plenty for a tablet screen. (The image store re-encodes to a
-      // small JPEG: gemini-3.1-flash-image ignores output_format and returns PNG.)
+      // small JPEG: the Gemini image models ignore output_format and return PNG.)
       body: JSON.stringify({
         model: this.model,
         prompt: request.prompt,
