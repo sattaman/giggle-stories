@@ -113,6 +113,8 @@ function StoryStep({ session, onStartOver }: { readonly session: StorySession; r
           performance={screen.performance}
           characters={view.characters}
           title={view.title}
+          illustrationUrl={view.illustrationUrl}
+          drawing={view.status === "performing" && view.illustrationUrl === null}
           onAnotherStory={onStartOver}
         />
       );

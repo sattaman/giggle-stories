@@ -9,6 +9,7 @@ import { BigButton } from "./big-button.tsx";
 import { Bouncy } from "./bouncy.tsx";
 import { CastRow } from "./cast-row.tsx";
 import { NarrationLine } from "./narration-line.tsx";
+import { PagePicture } from "./page-picture.tsx";
 import { SpeechBubble } from "./speech-bubble.tsx";
 import { text } from "./text-styles.ts";
 import { colours, fonts } from "./theme.ts";
@@ -17,11 +18,15 @@ export interface PerformanceViewProps {
   readonly performance: Performance;
   readonly characters: readonly Character[];
   readonly title: string | null;
+  /** The page's picture; null until it's drawn (or if drawing failed). */
+  readonly illustrationUrl: string | null;
+  /** Still being drawn: show a placeholder frame. */
+  readonly drawing: boolean;
   readonly onAnotherStory: () => void;
 }
 
 /** The story page: plays each line in order, lighting up whoever is speaking. */
-export function PerformanceView({ performance, characters, title, onAnotherStory }: PerformanceViewProps) {
+export function PerformanceView({ performance, characters, title, illustrationUrl, drawing, onAnotherStory }: PerformanceViewProps) {
   const playback = usePlayback(performance);
   const narration = useNarration();
   const { state, segments } = playback;
@@ -43,6 +48,7 @@ export function PerformanceView({ performance, characters, title, onAnotherStory
   return (
     <View style={styles.stack}>
       {title !== null && <Text style={text.heading}>{title}</Text>}
+      <PagePicture url={illustrationUrl} drawing={drawing} />
       <CastRow cast={cast} speakingId={speakingId} compact />
 
       {state.phase === "ready" && (
