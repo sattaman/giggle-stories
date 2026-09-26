@@ -72,7 +72,6 @@ storytime/
 │   ├── server/     # Fastify routes, SSE, wiring.ts, debug routes
 │   ├── client/     # Expo (web now, iOS/Android later): child UI + /debug viewer
 │   └── evals/      # *.eval.ts, datasets/, judges/
-├── spikes/voice/   # Phase 0 throwaway script
 ├── docs/           # this plan, research notes, ADRs
 ├── runs/           # per-session run folders (gitignored)
 ├── langgraph.json
@@ -194,7 +193,7 @@ The POC is web-first, but nothing we build should need rewriting for the app.
 
 | # | Phase | What we build | You learn | Try with her? |
 |---|---|---|---|---|
-| **0** | **Voice spike** | `spikes/voice`: design 3 voices (narrator + 2 kids), hand-write a funny 60–90s scene as segments, TTS per segment → concat → WAV. Log latency and cost. Confirm Voice Design works from the UK. | @google/genai Interactions API, Voice Design | ✅ **the key test** |
+| **0** | **Voice spike** | (throwaway; removed once done): design 3 voices (narrator + 2 kids), hand-write a funny 60–90s scene as segments, TTS per segment → concat → WAV. Log latency and cost. Confirm Voice Design works from the UK. | @google/genai Interactions API, Voice Design | ✅ **the key test** |
 | 1 | Foundations | pnpm monorepo, strict TS + ESLint (skill), domain schemas + invariant tests, port interfaces, fakes, pino, run recorder, CLI shell | typescript-setup, hexagonal architecture | — |
 | 2 | Graph on fakes | the full graph with fake ports + MemorySaver; vitest routing/interrupt tests; open it in **Studio** | StateSchema, interrupt/Command, context DI, Studio | — |
 | 3 | Real adapters | OpenRouter StoryWriter (withStructuredOutput), Gemini TTS/Voices/Transcribe adapters, SqliteSaver, LangSmith tracing + threads; the CLI plays a full story | structured output, traceable, threads | ✅ via CLI |
