@@ -41,8 +41,12 @@ export function illustrationPrompt(input: {
     brief.setting === "" ? "" : `Setting: ${brief.setting}.`,
     "Characters (draw each exactly as described, and the same way every time):",
     ...characters,
-    `Draw the single funniest or most exciting moment of this page, with the characters in it:`,
+    "Draw the single funniest or most exciting moment of this page, with the characters in it.",
+    // Verbatim lines tempt image models to letter them in as a caption, so they're labelled as
+    // context and the no-text rule comes last, where it carries most weight.
+    "What happens on this page (for choosing the scene only; never write any of these words in the picture):",
     ...page,
+    "Remember: the picture must contain no text at all: no captions, letters, words, labels or speech bubbles.",
   ]
     .filter((line) => line !== "")
     .join("\n");
