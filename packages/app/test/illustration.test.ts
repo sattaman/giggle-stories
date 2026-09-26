@@ -55,8 +55,10 @@ describe("illustrationPrompt", () => {
     expect(prompt).not.toContain("<giggle>");
   });
 
-  it("forbids text in the image and sets the mood for the age band", () => {
+  it("forbids text in the image, last of all, and sets the mood for the age band", () => {
     expect(prompt).toContain("no text, letters, words");
+    expect(prompt).toContain("never write any of these words in the picture");
+    expect(prompt.split("\n").at(-1)).toMatch(/^Remember: the picture must contain no text/);
     expect(prompt).toContain("Very simple shapes");
   });
 });
