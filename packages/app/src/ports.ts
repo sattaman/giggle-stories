@@ -56,11 +56,14 @@ export interface SpeechSynthesizer {
   }): Promise<{
     readonly wav: Uint8Array;
     readonly durationMs: number;
+    /** The model that actually spoke, when the provider falls back between models. */
+    readonly model?: string;
   }>;
 }
 
 export interface Transcriber {
-  transcribe(audio: { readonly bytes: Uint8Array; readonly mimeType: string }): Promise<string>;
+  /** `storyId`, when the recording answers a story's question, lets tracing file it under that story. */
+  transcribe(audio: { readonly bytes: Uint8Array; readonly mimeType: string; readonly storyId?: string | undefined }): Promise<string>;
 }
 
 export interface AudioStore {

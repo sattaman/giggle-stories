@@ -120,6 +120,31 @@ describe("http", () => {
     expect((await server.inject({ method: "GET", url: "/v1/stories/../../etc" })).statusCode).toBe(404);
   });
 
+  it("files a spoken answer under its story, and rejects a malformed story id", async () => {
+    const seen: (string | undefined)[] = [];
+    const server = await buildHttp({
+      stories,
+      transcriber: {
+        transcribe: ({ storyId }) => {
+          seen.push(storyId);
+          return Promise.resolve("moon cheese");
+        },
+      },
+      narration: () => ({ clips: { welcome: null, idea: null, thinking: null, voices_intro: null, voices_outro: null, changing: null, ready: null, the_end: null } }),
+      audioPath: () => undefined,
+      logger: false,
+    });
+    const boundary = "----storytime";
+    const upload = {
+      headers: { "content-type": `multipart/form-data; boundary=${boundary}` },
+      payload: `--${boundary}\r\nContent-Disposition: form-data; name="audio"; filename="a.webm"\r\nContent-Type: audio/webm\r\n\r\nxx\r\n--${boundary}--\r\n`,
+    };
+    expect((await server.inject({ method: "POST", url: "/v1/transcriptions?storyId=story_abc", ...upload })).json()).toEqual({ text: "moon cheese" });
+    expect((await server.inject({ method: "POST", url: "/v1/transcriptions", ...upload })).statusCode).toBe(200);
+    expect((await server.inject({ method: "POST", url: "/v1/transcriptions?storyId=../x", ...upload })).statusCode).toBe(400);
+    expect(seen).toEqual(["story_abc", undefined]);
+  });
+
   it("reports upstream validation failures as 502, not 400", async () => {
     const { z } = await import("zod");
     const server = await buildHttp({

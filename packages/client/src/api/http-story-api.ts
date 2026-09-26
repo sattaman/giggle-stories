@@ -48,10 +48,11 @@ export function createHttpStoryApi(baseUrl: string): StoryApi {
   }
 
   return {
-    async transcribe(audio: AudioUpload): Promise<string> {
+    async transcribe(audio: AudioUpload, storyId?: string): Promise<string> {
       const form = new FormData();
       appendAudio(form, audio);
-      const result = await request("/v1/transcriptions", { method: "POST", body: form }, TranscriptionResult, TRANSCRIBE_TIMEOUT_MS);
+      const path = storyId === undefined ? "/v1/transcriptions" : `/v1/transcriptions?storyId=${encodeURIComponent(storyId)}`;
+      const result = await request(path, { method: "POST", body: form }, TranscriptionResult, TRANSCRIBE_TIMEOUT_MS);
       return result.text.trim();
     },
     start(idea: string, ageBand: AgeBand): Promise<StoryView> {

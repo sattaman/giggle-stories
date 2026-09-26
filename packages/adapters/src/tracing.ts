@@ -5,7 +5,7 @@
 import type { SpeechSynthesizer, Transcriber, VoiceDesigner } from "@storytime/app";
 import { awaitAllCallbacks } from "@langchain/core/callbacks/promises";
 import { Client } from "langsmith";
-import { traceable } from "langsmith/traceable";
+import { getCurrentRunTree, traceable } from "langsmith/traceable";
 import { TRANSCRIBE_MODEL, TTS_MODEL } from "./gemini/gemini.ts";
 
 /** One client for the traceable wrappers below, so their pending batches can be flushed. */
@@ -24,15 +24,24 @@ const gemini = (model: string) => ({ ls_provider: "google", ls_model_name: model
 
 export function tracedSpeech(inner: SpeechSynthesizer): SpeechSynthesizer {
   return {
-    synthesize: traceable((request: Parameters<SpeechSynthesizer["synthesize"]>[0]) => inner.synthesize(request), {
-      name: "gemini_tts",
-      run_type: "llm",
-      client,
-      tags: ["gemini", "tts"],
-      metadata: gemini(TTS_MODEL), // may fall back to the Lite model when Flash's daily quota runs out
-      processInputs: (request) => ({ text: request.text, voice_id: request.voiceId, style: request.style }),
-      processOutputs: (out) => ({ duration_ms: out.durationMs, wav_bytes: out.wav.byteLength }),
-    }),
+    synthesize: traceable(
+      async (request: Parameters<SpeechSynthesizer["synthesize"]>[0]) => {
+        const result = await inner.synthesize(request);
+        // Record the model that actually spoke (daily-quota fallback can change it).
+        const run = getCurrentRunTree(true);
+        if (run !== undefined && result.model !== undefined) run.metadata = { ...run.metadata, ls_model_name: result.model };
+        return result;
+      },
+      {
+        name: "gemini_tts",
+        run_type: "llm",
+        client,
+        tags: ["gemini", "tts"],
+        metadata: gemini(TTS_MODEL), // replaced by the model actually used, above
+        processInputs: (request) => ({ text: request.text, voice_id: request.voiceId, style: request.style }),
+        processOutputs: (out) => ({ duration_ms: out.durationMs, wav_bytes: out.wav.byteLength, model: out.model ?? null }),
+      },
+    ),
   };
 }
 
@@ -52,14 +61,20 @@ export function tracedVoices(inner: VoiceDesigner): VoiceDesigner {
 }
 
 export function tracedTranscriber(inner: Transcriber): Transcriber {
+  const transcribe = traceable((audio: Parameters<Transcriber["transcribe"]>[0]) => inner.transcribe(audio), {
+    name: "gemini_transcribe",
+    run_type: "llm",
+    client,
+    tags: ["gemini", "stt"],
+    metadata: gemini(TRANSCRIBE_MODEL),
+    processInputs: (audio) => ({ mime_type: audio.mimeType, bytes: audio.bytes.byteLength }),
+    });
   return {
-    transcribe: traceable((audio: Parameters<Transcriber["transcribe"]>[0]) => inner.transcribe(audio), {
-      name: "gemini_transcribe",
-      run_type: "llm",
-      client,
-      tags: ["gemini", "stt"],
-      metadata: gemini(TRANSCRIBE_MODEL),
-      processInputs: (audio) => ({ mime_type: audio.mimeType, bytes: audio.bytes.byteLength }),
-    }),
+    // Transcriptions happen outside the graph; a story's answers join its LangSmith thread
+    // (child runs inherit thread_id), so they can be found, and deleted, with the story.
+    transcribe: (audio) =>
+      audio.storyId === undefined
+        ? transcribe(audio)
+        : traceable(() => transcribe(audio), { name: "transcription", client, metadata: { thread_id: audio.storyId } })(),
   };
 }

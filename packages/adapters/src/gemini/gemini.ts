@@ -142,6 +142,7 @@ export class GeminiSpeech implements SpeechSynthesizer {
   }): Promise<{
     readonly wav: Uint8Array;
     readonly durationMs: number;
+    readonly model: string;
   }> {
     const annotations = request.style.trim() === "" ? [] : [{ type: "speech_metadata" as const, style: request.style }];
     let lastError: unknown = new Error("All TTS models are out of daily quota");
@@ -162,7 +163,7 @@ export class GeminiSpeech implements SpeechSynthesizer {
           request.signal,
         );
         const pcm = toPcm(Buffer.from(AudioResult.parse(interaction).output_audio.data, "base64"));
-        return { wav: toWav(pcm), durationMs: durationMs(pcm) };
+        return { wav: toWav(pcm), durationMs: durationMs(pcm), model };
       } catch (error: unknown) {
         if (!isDailyQuota(error)) throw error;
         const resetMs = retryDelayMs(apiError(error)?.message ?? "") ?? 60 * 60 * 1000;
@@ -200,7 +201,7 @@ export class GeminiSpeech implements SpeechSynthesizer {
         }
         const pcm = toPcm(Buffer.from(data, "base64"));
         this.log.warn({ model, voice: request.fallbackVoice }, "tts via legacy model (built-in voice)");
-        return { wav: toWav(pcm), durationMs: durationMs(pcm) };
+        return { wav: toWav(pcm), durationMs: durationMs(pcm), model };
       } catch (error: unknown) {
         if (!isDailyQuota(error)) throw error;
         const resetMs = retryDelayMs(apiError(error)?.message ?? "") ?? 60 * 60 * 1000;

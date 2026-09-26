@@ -24,13 +24,15 @@ export interface OutlineReviewProps {
   readonly onIntroStarted: () => void;
   readonly onApprove: () => Promise<boolean>;
   readonly onChange: (feedback: string) => Promise<boolean>;
+  /** Files a spoken change request under this story. */
+  readonly storyId: string;
 }
 
 /**
  * "Here's my plan!": the title and the big Yes / Change buttons up top, then the
  * cast (who say hello one by one: the voice introductions) and six short beats.
  */
-export function OutlineReview({ outline, characters, autoIntro, onIntroStarted, onApprove, onChange }: OutlineReviewProps) {
+export function OutlineReview({ outline, characters, autoIntro, onIntroStarted, onApprove, onChange, storyId }: OutlineReviewProps) {
   const narration = useNarration();
   const { loaded, play, stop, stopWhere } = narration;
   const intro = useMemo(() => voiceIntroClips(characters, narration.clips), [characters, narration.clips]);
@@ -81,7 +83,7 @@ export function OutlineReview({ outline, characters, autoIntro, onIntroStarted, 
   const actions = changing ? (
     <View style={styles.change}>
       <Text style={text.heading}>What should I change?</Text>
-      <SpeechInput submitLabel="Change it!" placeholder="e.g. Make the frog a pirate too" onSubmit={onChange} />
+      <SpeechInput submitLabel="Change it!" placeholder="e.g. Make the frog a pirate too" onSubmit={onChange} storyId={storyId} />
       <BigButton
         variant="ghost"
         size="small"

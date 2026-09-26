@@ -25,6 +25,7 @@ function parseRequest<S extends z.ZodType>(schema: S, value: unknown): z.infer<S
 
 const StoryParams = z.object({ id: z.string().regex(/^story_[a-z0-9]+$/) });
 const AudioParams = z.object({ story: z.string(), file: z.string() });
+const TranscriptionQuery = z.object({ storyId: StoryParams.shape.id.optional() });
 
 export interface HttpDeps {
   readonly stories: StoryService;
@@ -61,7 +62,8 @@ export async function buildHttp(deps: HttpDeps): Promise<FastifyInstance> {
     if (file === undefined) return reply.code(400).send({ error: "Missing audio" });
     const bytes = await file.toBuffer();
     const mimeType = file.mimetype.split(";")[0] ?? file.mimetype;
-    const text = await deps.transcriber.transcribe({ bytes, mimeType });
+    const { storyId } = parseRequest(TranscriptionQuery, request.query);
+    const text = await deps.transcriber.transcribe({ bytes, mimeType, storyId });
     const result: TranscriptionResult = { text };
     return result;
   });

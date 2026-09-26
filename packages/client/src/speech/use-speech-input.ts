@@ -18,7 +18,8 @@ export interface SpeechInput {
   readonly reset: () => void;
 }
 
-export function useSpeechInput(api: StoryApi): SpeechInput {
+/** `storyId` (when answering a story's question) is sent with the recording for tracing. */
+export function useSpeechInput(api: StoryApi, storyId?: string): SpeechInput {
   const recorder = useRecorder();
   const [state, dispatch] = useReducer(speechReducer, INITIAL_SPEECH);
   const [now, setNow] = useState(() => Date.now());
@@ -55,7 +56,7 @@ export function useSpeechInput(api: StoryApi): SpeechInput {
     dispatch({ type: "stopRequested" });
     try {
       const upload = await recorder.stop();
-      const text = await api.transcribe(upload);
+      const text = await api.transcribe(upload, storyId);
       dispatch({ type: "transcribed", text });
     } catch (error: unknown) {
       dispatch({

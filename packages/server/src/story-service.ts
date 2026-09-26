@@ -221,7 +221,8 @@ export class GraphStoryService implements StoryService {
     const settled = this.stream(id, progress, graphInput, {
       configurable: { thread_id: id },
       context: { deps: this.deps },
-      metadata: { thread_id: id }, // groups the whole story as one LangSmith thread
+      // thread_id groups the whole story as one LangSmith thread; invocation tells its runs apart.
+      metadata: { thread_id: id, invocation: input.kind },
       recursionLimit: 60,
       runName: "story",
       // Save each step's checkpoint before the next step starts. With the default "async" it's

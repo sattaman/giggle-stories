@@ -89,6 +89,7 @@ function StoryStep({ session, onStartOver }: { readonly session: StorySession; r
           question={screen.question}
           audioUrl={screen.audioUrl}
           onAnswer={(text) => reply("answer", { kind: "answer", text })}
+          storyId={view.id}
         />
       );
     case "outline":
@@ -103,6 +104,7 @@ function StoryStep({ session, onStartOver }: { readonly session: StorySession; r
           }}
           onApprove={() => reply("approve", { kind: "outline", approved: true })}
           onChange={(feedback) => reply("change", { kind: "outline", approved: false, feedback })}
+          storyId={view.id}
         />
       );
     case "performance":

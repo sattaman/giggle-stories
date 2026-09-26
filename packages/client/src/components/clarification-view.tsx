@@ -10,10 +10,12 @@ export interface ClarificationViewProps {
   readonly question: string;
   readonly audioUrl: string | null;
   readonly onAnswer: (answer: string) => Promise<boolean>;
+  /** Files the spoken answer under this story. */
+  readonly storyId: string;
 }
 
 /** One quick question from the storyteller, asked out loud when the browser lets us. */
-export function ClarificationView({ question, audioUrl, onAnswer }: ClarificationViewProps) {
+export function ClarificationView({ question, audioUrl, onAnswer, storyId }: ClarificationViewProps) {
   const clips = useClipPlayer();
   const { play } = clips;
 
@@ -41,7 +43,7 @@ export function ClarificationView({ question, audioUrl, onAnswer }: Clarificatio
           />
         )}
       </View>
-      <SpeechInput submitLabel="That's my answer!" placeholder="Type your answer…" onSubmit={onAnswer} onListen={clips.stop} />
+      <SpeechInput submitLabel="That's my answer!" placeholder="Type your answer…" onSubmit={onAnswer} onListen={clips.stop} storyId={storyId} />
     </View>
   );
 }
