@@ -18,3 +18,4 @@ gen-lang-client-*.json
 *-credentials.json
 data/
 packages/client/docs/screenshots/
+.turbo/

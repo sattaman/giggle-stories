@@ -35,7 +35,7 @@ Built as a real product for one very demanding user (success = she laughs and as
 | Observability | **LangSmith** (EU) | Each story is one LangSmith thread: every graph node, LLM call, voice design and TTS line, with its real model and cost. Spoken answers join their story's thread. |
 | API | Fastify, zod | A small `/v1` API. Every boundary is validated (HTTP, env, LLM output, SDK results, even checkpoints). |
 | App | Expo / React Native (web first) | A child-first UI: big buttons, narration, speaking-character highlights and "Try again" that carries a story on. |
-| Quality | TypeScript 7 + 6, strict ESLint, Vitest, GitHub Actions, gitleaks | No `any`, no `as`, no `!`. About 150 tests, run in CI with a secret scan. |
+| Quality | TypeScript 7 + 6, strict ESLint, Vitest, Turborepo, GitHub Actions, gitleaks | No `any`, no `as`, no `!`. About 150 tests, run in CI with a secret scan. One command brings the whole stack up. |
 
 ## Engineering highlights
 
@@ -53,7 +53,7 @@ pnpm install
 pnpm start
 ```
 
-Open the URL printed by Expo (normally http://localhost:8082). This starts the API on port 8787, waits for it to be ready, and then starts the web app. If 8082 is occupied, it picks the next free web port. Ctrl-C stops both. It leaves other processes alone, including Expo on port 8081.
+`pnpm start` uses [Turborepo](https://turborepo.com) to run each app's `dev` task side by side: the API on http://localhost:8787 (restarts when its code changes) and the web app on **http://localhost:8082**. Ctrl-C stops both, and the API finishes its current story step before exiting.
 
 For a phone or iPad on the same Wi-Fi network, set the API address before starting, then open the Expo URL on the device, replacing `localhost` with your Mac's IP:
 
