@@ -15,7 +15,7 @@ Status: proposal. Nothing here is built yet. Vendor pricing and platform rules m
 | Data is SQLite checkpoints, `stories.jsonl` and audio files in `data/` on local disk | Needs a persistent disk or a real database |
 | Progress is an in-memory `live` map, and graph steps run in the background | Breaks with more than one server instance, or on a host that freezes the CPU between requests |
 | **TTS quota: about 10 stories a day in total** (see CLAUDE.md) | **The biggest blocker.** A handful of testers would use it up in a morning |
-| LangSmith is in the US region and receives children's ideas | Fine for our own family, not for other families' children (UK Children's Code) |
+| LangSmith (EU region) receives children's ideas | Fine for our own family, not for other families' children (UK Children's Code) |
 
 **Already in our favour:**
 - The API is bearer-token-ready, with no cookie sessions (plan §8a.5), so web and mobile share the same auth.

@@ -1,5 +1,5 @@
 # LangSmith JS (langsmith 0.10.5, openevals 0.2.2) — verified 2026-09-24
-- Env: LANGSMITH_TRACING, LANGSMITH_API_KEY, LANGSMITH_PROJECT, LANGSMITH_ENDPOINT=https://api.smith.langchain.com (US; region fixed at signup). Free: 1 seat, 5k traces/mo, 14d retention.
+- Env: LANGSMITH_TRACING, LANGSMITH_API_KEY, LANGSMITH_PROJECT, LANGSMITH_ENDPOINT=https://eu.api.smith.langchain.com (EU; region fixed at signup, and a key only works against its own region). Free: 1 seat, 5k traces/mo, 14d retention.
 - traceable from "langsmith/traceable" {name, run_type:"llm"|"chain"|"tool"..., tags, metadata, processInputs/processOutputs, extractAttachments}. Threads: metadata thread_id|session_id (uuid7). LangGraph configurable.thread_id auto-propagates. awaitPendingTraceBatches() in scripts.
 - wrapGemini only traces generateContent — wrap TTS port ourselves; strip audio bytes via processOutputs.
 - Attachments: {name:["audio/wav", Uint8Array]} on traces/examples; evaluate({includeAttachments:true}).
