@@ -8,7 +8,7 @@ export type StoryScreen =
   | { readonly kind: "clarification"; readonly question: string; readonly audioUrl: string | null; readonly round: number }
   | { readonly kind: "outline"; readonly outline: Outline }
   | { readonly kind: "performance"; readonly performance: Performance }
-  | { readonly kind: "error"; readonly message: string };
+  | { readonly kind: "error"; readonly message: string; readonly canRetry: boolean };
 
 const STAGE_MESSAGES: Record<NonNullable<StoryView["stage"]>, string> = {
   listening: "Listening carefully…",
@@ -21,7 +21,7 @@ const STAGE_MESSAGES: Record<NonNullable<StoryView["stage"]>, string> = {
 
 export function screenFor(view: StoryView): StoryScreen {
   if (view.status === "error") {
-    return { kind: "error", message: view.error ?? "Something went wrong." };
+    return { kind: "error", message: view.error ?? "Something went wrong.", canRetry: view.canRetry };
   }
   if ((view.status === "performing" || view.status === "done") && view.performance !== null) {
     return { kind: "performance", performance: view.performance };

@@ -1,5 +1,7 @@
 {
+  "$schema": "https://langgra.ph/schema.json",
   "node_version": "22",
+  "dependencies": ["."],
   "graphs": { "storytime": "./dev/studio.ts:graph" },
   "env": { "LANGSMITH_TRACING": "false" }
 }

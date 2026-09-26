@@ -17,6 +17,7 @@
     "@storytime/adapters": "workspace:*",
     "@storytime/app": "workspace:*",
     "@storytime/domain": "workspace:*",
+    "better-sqlite3": "12.11.1",
     "fastify": "^5.12.5",
     "langsmith": "^0.10.5",
     "pino": "^10.3.1",

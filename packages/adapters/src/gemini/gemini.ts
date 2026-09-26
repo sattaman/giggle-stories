@@ -86,15 +86,29 @@ export interface GeminiOptions {
   readonly sleep?: Sleep;
 }
 
-/** Retries 429/5xx, honouring the server's "retry in Ns" hint. Daily quotas aren't retried. */
-async function withRetry<T>(what: string, log: Logger, fn: () => Promise<T>, sleep: Sleep = realSleep): Promise<T> {
+/** SDK request options: no hidden retries, and cancellation from the calling graph node. */
+function requestOptions(signal: AbortSignal | undefined) {
+  return signal === undefined ? NO_SDK_RETRIES : { ...NO_SDK_RETRIES, signal };
+}
+
+/**
+ * Retries 429/5xx, honouring the server's "retry in Ns" hint. Daily quotas aren't retried,
+ * and nothing is retried once `signal` (the graph node's) has been aborted.
+ */
+async function withRetry<T>(
+  what: string,
+  log: Logger,
+  fn: () => Promise<T>,
+  sleep: Sleep = realSleep,
+  signal?: AbortSignal,
+): Promise<T> {
   for (let attempt = 1; ; attempt++) {
     try {
       return await fn();
     } catch (error: unknown) {
       const api = apiError(error);
       const retryable = api !== undefined && (api.status === 429 || api.status >= 500) && !isDailyQuota(error);
-      if (!retryable || attempt >= 5) throw error;
+      if (!retryable || attempt >= 5 || signal?.aborted === true) throw error;
       const hinted = retryDelayMs(api.message);
       const waitMs = Math.min(20_000, hinted === undefined ? 1000 * 2 ** attempt : hinted + 250);
       log.warn({ what, attempt, status: api.status, waitMs }, "gemini retry");
@@ -124,9 +138,11 @@ export class GeminiSpeech implements SpeechSynthesizer {
     readonly voiceId: string;
     readonly fallbackVoice: string;
     readonly style: string;
+    readonly signal?: AbortSignal | undefined;
   }): Promise<{
     readonly wav: Uint8Array;
     readonly durationMs: number;
+    readonly model: string;
   }> {
     const annotations = request.style.trim() === "" ? [] : [{ type: "speech_metadata" as const, style: request.style }];
     let lastError: unknown = new Error("All TTS models are out of daily quota");
@@ -141,12 +157,13 @@ export class GeminiSpeech implements SpeechSynthesizer {
               response_format: { type: "audio", mime_type: "audio/l16", sample_rate: SAMPLE_RATE },
               generation_config: { speech_config: [{ voice: request.voiceId }] },
             },
-            NO_SDK_RETRIES,
+            requestOptions(request.signal),
           ),
           this.sleep,
+          request.signal,
         );
         const pcm = toPcm(Buffer.from(AudioResult.parse(interaction).output_audio.data, "base64"));
-        return { wav: toWav(pcm), durationMs: durationMs(pcm) };
+        return { wav: toWav(pcm), durationMs: durationMs(pcm), model };
       } catch (error: unknown) {
         if (!isDailyQuota(error)) throw error;
         const resetMs = retryDelayMs(apiError(error)?.message ?? "") ?? 60 * 60 * 1000;
@@ -169,9 +186,11 @@ export class GeminiSpeech implements SpeechSynthesizer {
               responseModalities: ["AUDIO"],
               speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: request.fallbackVoice } } },
               httpOptions: { retryOptions: { attempts: 1 } },
+              ...(request.signal === undefined ? {} : { abortSignal: request.signal }),
             },
           }),
           this.sleep,
+          request.signal,
         );
         const data = LegacyAudio.parse(response).candidates[0]?.content?.parts?.find((p) => p.inlineData !== undefined)
           ?.inlineData?.data;
@@ -182,7 +201,7 @@ export class GeminiSpeech implements SpeechSynthesizer {
         }
         const pcm = toPcm(Buffer.from(data, "base64"));
         this.log.warn({ model, voice: request.fallbackVoice }, "tts via legacy model (built-in voice)");
-        return { wav: toWav(pcm), durationMs: durationMs(pcm) };
+        return { wav: toWav(pcm), durationMs: durationMs(pcm), model };
       } catch (error: unknown) {
         if (!isDailyQuota(error)) throw error;
         const resetMs = retryDelayMs(apiError(error)?.message ?? "") ?? 60 * 60 * 1000;
@@ -210,6 +229,7 @@ export class GeminiVoiceDesigner implements VoiceDesigner {
     readonly name: string;
     readonly gender: "female" | "male" | "neutral";
     readonly description: string;
+    readonly signal?: AbortSignal | undefined;
   }): Promise<{ readonly voiceId: string; readonly preview: Uint8Array | undefined }> {
     try {
       const created = await withRetry("voice_design", this.log, () =>
@@ -225,9 +245,10 @@ export class GeminiVoiceDesigner implements VoiceDesigner {
             prompted: { input: request.description },
           },
         },
-          NO_SDK_RETRIES,
+          requestOptions(request.signal),
         ),
         this.sleep,
+        request.signal,
       );
       const voice = CreatedVoice.parse(created);
       return {

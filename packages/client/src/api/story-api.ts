@@ -9,11 +9,13 @@ export type AudioUpload =
   | { readonly kind: "file"; readonly uri: string; readonly name: string; readonly type: string };
 
 export interface StoryApi {
-  /** Speech to text. Resolves to the transcript (possibly empty). */
-  transcribe(audio: AudioUpload): Promise<string>;
+  /** Speech to text. Resolves to the transcript (possibly empty). `storyId` files it under that story. */
+  transcribe(audio: AudioUpload, storyId?: string): Promise<string>;
   start(idea: string, ageBand: AgeBand): Promise<StoryView>;
   get(id: string): Promise<StoryView>;
   reply(id: string, body: ReplyBody): Promise<StoryView>;
+  /** Carries on a story that stopped part-way (`view.canRetry`). */
+  retry(id: string): Promise<StoryView>;
   /** The narrator's fixed guide lines. Callers treat a failure as "no narration". */
   narration(): Promise<NarrationClips>;
   /** Every story made so far, most recent first. */

@@ -2,10 +2,18 @@
 // Every answer is canned: no LLM, TTS or file writes, and nothing derived from a real child.
 
 import type { StructuredModel, StoryDeps } from "../src/ports.ts";
-import type { z } from "zod";
-import { FakeVoices, RecordingProgress, brief, cast, decisions, fakeAudio, fakeSpeech, outline, script, silentLog } from "../test/fakes.ts";
+import { z } from "zod";
+import { FakeVoices, brief, cast, decisions, fakeAudio, fakeSpeech, outline, script, silentLog } from "./fakes.ts";
 
 const REVISED_TITLE = "Revised plan";
+
+/** Reads back a JSON value the writer put in the prompt with `block(label, value)`. */
+function parseBlock<S extends z.ZodType>(prompt: string, label: string, schema: S): z.infer<S> {
+  const body = new RegExp(`<${label}>\\n([\\s\\S]*?)\\n</${label}>`).exec(prompt)?.[1];
+  if (body === undefined) throw new Error(`Prompt has no <${label}> block`);
+  const value: unknown = JSON.parse(body);
+  return schema.parse(value);
+}
 
 /**
  * Answers every writer task with synthetic data. Unlike the queued test fake it is stateless,
@@ -24,8 +32,8 @@ export class SyntheticModel implements StructuredModel {
       case "extract_brief":
         return brief;
       case "decide_clarification":
-        // Ask once: the first decision sees an empty <already_asked> list.
-        return prompt.includes("<already_asked>\n[]") ? decisions.ask : decisions.ready;
+        // Ask once, then go ahead: exercises both the question and the outline pause.
+        return parseBlock(prompt, "already_asked", z.array(z.unknown())).length === 0 ? decisions.ask : decisions.ready;
       case "cast_characters":
       case "recast_characters":
         return cast;
@@ -49,7 +57,6 @@ export function syntheticDeps(overrides: Partial<StoryDeps> = {}): StoryDeps {
     voices: new FakeVoices(),
     speech: fakeSpeech,
     audio: fakeAudio,
-    progress: new RecordingProgress(),
     log: silentLog,
     narratorVoiceId: "voice_narrator",
     stockVoices: {},

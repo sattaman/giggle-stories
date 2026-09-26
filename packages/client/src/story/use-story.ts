@@ -5,6 +5,7 @@ import type { ReplyBody, StoryView } from "@storytime/domain";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError, type StoryApi } from "../api/story-api.ts";
 import { pollDelayMs, shouldPoll } from "./flow.ts";
+import { sendAndRefresh } from "./send.ts";
 
 /** After this many failed polls in a row we tell the child we're reconnecting. */
 const RECONNECTING_AFTER_FAILURES = 2;
@@ -19,6 +20,8 @@ export interface StorySession {
   readonly reconnecting: boolean;
   /** Sends a reply. Resolves false (and keeps the current screen) if it didn't get through. */
   readonly reply: (body: ReplyBody) => Promise<boolean>;
+  /** Carries on a story that stopped part-way. Resolves false if it didn't get through. */
+  readonly retry: () => Promise<boolean>;
 }
 
 export function useStory(api: StoryApi, id: string): StorySession {
@@ -65,24 +68,16 @@ export function useStory(api: StoryApi, id: string): StorySession {
     };
   }, [api, id, accept]);
 
-  const reply = useCallback(
-    async (body: ReplyBody): Promise<boolean> => {
-      try {
-        accept(await api.reply(id, body));
-        return true;
-      } catch (error: unknown) {
-        // 409: the story moved on without us (e.g. a double tap); just refresh.
-        if (!(error instanceof ApiError && error.status === 409)) return false;
-        try {
-          accept(await api.get(id));
-          return true;
-        } catch {
-          return false;
-        }
-      }
+  const send = useCallback(
+    async (request: () => Promise<StoryView>): Promise<boolean> => {
+      const view = await sendAndRefresh(request, () => api.get(id));
+      if (view !== null) accept(view);
+      return view !== null;
     },
     [api, id, accept],
   );
+  const reply = useCallback((body: ReplyBody) => send(() => api.reply(id, body)), [api, id, send]);
+  const retry = useCallback(() => send(() => api.retry(id)), [api, id, send]);
 
-  return { load, reconnecting: failures >= RECONNECTING_AFTER_FAILURES, reply };
+  return { load, reconnecting: failures >= RECONNECTING_AFTER_FAILURES, reply, retry };
 }

@@ -119,6 +119,14 @@ export function createMockStoryApi(): StoryApi {
       return snapshot(id);
     },
 
+    async retry(id: string): Promise<StoryView> {
+      await delay(LATENCY_MS);
+      if (!snapshot(id).canRetry) throw new ApiError("Nothing to carry on", 409);
+      update(id, (v) => ({ ...working(v, "writing", "Picking up where we left off…"), error: null, canRetry: false }));
+      schedule(id, [{ afterMs: STEP_MS * 2, apply: (v) => outlineReview(v, "The Story That Wouldn't Give Up") }]);
+      return snapshot(id);
+    },
+
     async listStories(): Promise<StorySummary[]> {
       await delay(LATENCY_MS);
       return [...stories.values()]
@@ -195,7 +203,7 @@ function seedStories(): Seed[] {
     {
       daysAgo: 4,
       ageBand: "0-4",
-      view: { ...emptyView("story_demo_error"), status: "error", idea: "A broken one", error: "Mock failure" },
+      view: { ...emptyView("story_demo_error"), status: "error", idea: "A broken one", error: "Mock failure", canRetry: true },
     },
   ];
 }
@@ -285,6 +293,7 @@ function emptyView(id: string): StoryView {
     title: null,
     performance: null,
     error: null,
+    canRetry: false,
   };
 }
 

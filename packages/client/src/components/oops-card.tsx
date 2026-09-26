@@ -4,13 +4,23 @@ import { text } from "./text-styles.ts";
 import { cardShadow, colours, radius } from "./theme.ts";
 
 /** A friendly dead end with a way out. Technical details stay out of sight. */
-export function OopsCard({ title, message, onRetry }: { readonly title: string; readonly message: string; readonly onRetry: () => void }) {
+export function OopsCard({
+  title,
+  message,
+  onRetry,
+  actionLabel = "Try again",
+}: {
+  readonly title: string;
+  readonly message: string;
+  readonly onRetry: () => void;
+  readonly actionLabel?: string;
+}) {
   return (
     <View style={styles.card}>
       <Text style={styles.emoji}>🙈</Text>
       <Text style={text.heading}>{title}</Text>
       <Text style={text.body}>{message}</Text>
-      <BigButton variant="primary" size="huge" label="Try again" onPress={onRetry} />
+      <BigButton variant="primary" size="huge" label={actionLabel} onPress={onRetry} />
     </View>
   );
 }

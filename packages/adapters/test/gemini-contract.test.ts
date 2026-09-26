@@ -50,6 +50,20 @@ describe("GeminiSpeech", () => {
     expect(waits).toEqual([2000, 4000, 8000, 16000]);
   });
 
+  it("stops retrying once the calling graph node is cancelled", async () => {
+    const fake = await fakeGemini(() => reply.rateLimited(2));
+    close = fake.close;
+    const controller = new AbortController();
+    // The node times out while the adapter waits to retry.
+    const sleep = () => {
+      controller.abort();
+      return Promise.resolve();
+    };
+    const speech = new GeminiSpeech(fake.ai, silent, { sleep });
+    await expect(speech.synthesize({ ...line, signal: controller.signal })).rejects.toThrow();
+    expect(fake.requests).toHaveLength(1);
+  });
+
   it("does not retry or fall back on a bad request", async () => {
     const { speech, requests } = await speechWith(() => reply.error(400, "invalid voice"));
     await expect(speech.synthesize(line)).rejects.toMatchObject({ status: 400 });

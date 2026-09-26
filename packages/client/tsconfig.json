@@ -16,12 +16,7 @@
     "forceConsistentCasingInFileNames": true,
     "allowImportingTsExtensions": true,
     "allowJs": false,
-    // Client-only exception to the repo's skipLibCheck: false. The RN/Expo .d.ts
-    // graph doesn't check cleanly: react-native's globals.d.ts clashes with lib.dom
-    // (and @types/node), expo-router's bundled react-navigation types break under
-    // exactOptionalPropertyTypes, and reanimated/react-native-screens reference
-    // modules that aren't installed (react-native-svg, ./TabsHost). Our own code is
-    // still fully checked.
+    // Extends Expo's base, not tsconfig.base.json, so repeat the repo setting (ADR 0001).
     "skipLibCheck": true
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"]

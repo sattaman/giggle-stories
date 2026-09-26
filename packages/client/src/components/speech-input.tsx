@@ -25,11 +25,13 @@ export interface SpeechInputProps {
   readonly onListen?: () => void;
   /** Longest text the server accepts here. */
   readonly maxLength?: number;
+  /** The story this answers, if any; its recording is filed under the story. */
+  readonly storyId?: string;
 }
 
 /** Say it (tap the mic) or type it, check it, send it. */
-export function SpeechInput({ submitLabel, placeholder, onSubmit, onListen, maxLength = DEFAULT_MAX_LENGTH }: SpeechInputProps) {
-  const speech = useSpeechInput(useStoryApi());
+export function SpeechInput({ submitLabel, placeholder, onSubmit, onListen, maxLength = DEFAULT_MAX_LENGTH, storyId }: SpeechInputProps) {
+  const speech = useSpeechInput(useStoryApi(), storyId);
   const narration = useNarration();
   const [sending, setSending] = useState(false);
   const [sendFailed, setSendFailed] = useState(false);

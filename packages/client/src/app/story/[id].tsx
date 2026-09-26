@@ -89,6 +89,7 @@ function StoryStep({ session, onStartOver }: { readonly session: StorySession; r
           question={screen.question}
           audioUrl={screen.audioUrl}
           onAnswer={(text) => reply("answer", { kind: "answer", text })}
+          storyId={view.id}
         />
       );
     case "outline":
@@ -103,6 +104,7 @@ function StoryStep({ session, onStartOver }: { readonly session: StorySession; r
           }}
           onApprove={() => reply("approve", { kind: "outline", approved: true })}
           onChange={(feedback) => reply("change", { kind: "outline", approved: false, feedback })}
+          storyId={view.id}
         />
       );
     case "performance":
@@ -115,10 +117,18 @@ function StoryStep({ session, onStartOver }: { readonly session: StorySession; r
         />
       );
     case "error":
-      return (
+      // A story that stopped part-way carries on from where it got to; otherwise start afresh.
+      return screen.canRetry ? (
         <OopsCard
           title="Oh no, the story machine got in a muddle!"
-          message="It's not your fault. Shall we try again?"
+          message="It's not your fault. Shall we carry on?"
+          onRetry={() => void session.retry()}
+        />
+      ) : (
+        <OopsCard
+          title="Oh no, the story machine got in a muddle!"
+          message="It's not your fault. Let's make a new one!"
+          actionLabel="New story"
           onRetry={onStartOver}
         />
       );

@@ -57,6 +57,8 @@ export const StoryView = z.object({
   title: z.string().nullable(),
   performance: Performance.nullable(),
   error: z.string().nullable(),
+  /** The story stopped part-way and can carry on from its last checkpoint (POST …/retry). */
+  canRetry: z.boolean(),
 });
 export type StoryView = z.infer<typeof StoryView>;
 

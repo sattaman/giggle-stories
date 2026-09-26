@@ -22,6 +22,3 @@ minimumReleaseAgeExclude:
   - expo-router@57.0.23
   - expo@57.0.25
 
-patchedDependencies:
-  '@langchain/core@1.2.12': patches/@langchain__core@1.2.12.patch
-  langsmith@0.10.5: patches/langsmith@0.10.5.patch
