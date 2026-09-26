@@ -121,3 +121,14 @@ describe("OpenRouterIllustrator references", () => {
     expect(JSON.stringify(fake.requests[0])).not.toContain("input_references");
   });
 });
+
+describe("OpenRouterIllustrator sizing", () => {
+  it("uses pixel sizes for OpenAI image models, which reject aspect_ratio and resolution", async () => {
+    const fake = await fakeOpenRouter(() => ({ status: 200, body: { created: 1, data: [{ b64_json: PNG.toString("base64"), media_type: "image/png" }] } }));
+    close = fake.close;
+    await new OpenRouterIllustrator("k", log, { baseURL: fake.baseURL, model: "openai/gpt-5-image-mini" }).draw({ prompt: "x" });
+    const body = JSON.stringify(fake.requests[0]);
+    expect(body).toContain('"size":"1536x1024"');
+    expect(body).not.toContain("aspect_ratio");
+  });
+});

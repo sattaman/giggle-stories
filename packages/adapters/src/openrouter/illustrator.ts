@@ -16,8 +16,20 @@ const ImagesResponse = z.object({
   usage: z.object({ cost: z.number().optional() }).optional(),
 });
 
+/**
+ * How a model is told the picture's shape. Gemini image models take an aspect ratio and a
+ * resolution tier; OpenAI's take pixel sizes (and reject the others).
+ */
+export type Sizing = "ratio" | "pixels";
+const SIZING: Record<Sizing, Record<string, string>> = {
+  ratio: { aspect_ratio: "4:3", resolution: "1K" },
+  pixels: { size: "1536x1024" },
+};
+
 export interface OpenRouterIllustratorOptions {
   readonly model?: string;
+  /** Defaults by model family: pixels for openai/*, ratio otherwise. */
+  readonly sizing?: Sizing;
   /** Test seam: point at a fake OpenRouter API. */
   readonly baseURL?: string;
 }
@@ -25,6 +37,7 @@ export interface OpenRouterIllustratorOptions {
 export class OpenRouterIllustrator implements Illustrator {
   readonly model: string;
   private readonly baseURL: string;
+  private readonly sizing: Sizing;
 
   constructor(
     private readonly apiKey: string,
@@ -32,6 +45,7 @@ export class OpenRouterIllustrator implements Illustrator {
     options: OpenRouterIllustratorOptions = {},
   ) {
     this.model = options.model ?? DEFAULT_IMAGE_MODEL;
+    this.sizing = options.sizing ?? (this.model.startsWith("openai/") ? "pixels" : "ratio");
     this.baseURL = options.baseURL ?? "https://openrouter.ai/api/v1";
   }
 
@@ -47,14 +61,13 @@ export class OpenRouterIllustrator implements Illustrator {
     const response = await fetch(`${this.baseURL}/images`, {
       method: "POST",
       headers: { authorization: `Bearer ${this.apiKey}`, "content-type": "application/json", "x-title": "Storytime" },
-      // A 4:3 page picture at 1K is plenty for a tablet screen. (The image store re-encodes to a
+      // A landscape page picture at about 1K is plenty for a tablet screen. (The image store re-encodes to a
       // small JPEG: gemini-3.1-flash-image ignores output_format and returns PNG.)
       body: JSON.stringify({
         model: this.model,
         prompt: request.prompt,
         n: 1,
-        aspect_ratio: "4:3",
-        resolution: "1K",
+        ...SIZING[this.sizing],
         // Earlier pictures to copy characters from, so a story looks like one book.
         ...(request.references === undefined || request.references.length === 0
           ? {}
