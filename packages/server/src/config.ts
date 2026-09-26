@@ -36,8 +36,12 @@ const Config = z.object({
   STORY_IMAGE_MODEL: z.string().optional(),
   /** Any OpenRouter text model for animated SVG scenes; default in the adapter. */
   STORY_SCENE_MODEL: z.string().optional(),
-  /** Which pictures each page gets: painted (~5p), animated SVG (~0.5p), both (for comparing), or none. */
-  STORY_PICTURES: z.enum(["both", "painted", "animated", "none"]).default("both"),
+  /**
+   * Which pictures each page gets: painted (~5p), animated SVG (~0.5p), both (for comparing), or
+   * none. Painted by default: in the first trial the model's hand-drawn SVG people were crude next
+   * to the painting, and its animations too small to notice.
+   */
+  STORY_PICTURES: z.enum(["both", "painted", "animated", "none"]).default("painted"),
   LOG_PRETTY: z.enum(["true", "false"]).default("true"),
 });
 export type Config = z.infer<typeof Config> & { readonly publicUrl: string };

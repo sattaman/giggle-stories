@@ -368,8 +368,14 @@ const recast: Node = async (state, config) => {
       old.voiceDescription === character.voiceDescription
     );
   };
-  const keptVoices = new Set(updated.filter(keeps).flatMap((c) => before.get(c.id)?.voice?.voiceId ?? []));
-  const picks = pickLibraryVoices(deps, updated.filter((c) => !keeps(c)), keptVoices);
+  // Voices a re-voiced character must not get: those kept characters are using, and every
+  // re-voiced character's old voice (the child asked for a change; the library would otherwise
+  // hand back the same voice when only the description changed). They get a designed one instead.
+  const revoiced = updated.filter((c) => !keeps(c));
+  const unavailable = new Set(
+    [...updated.filter(keeps), ...revoiced].flatMap((c) => before.get(c.id)?.voice?.voiceId ?? []),
+  );
+  const picks = pickLibraryVoices(deps, revoiced, unavailable);
   const voiceWriter = voiceWriterFor(deps, state, config.signal);
   const cast = await Promise.all(
     updated.map(async (character, index): Promise<Character> => {

@@ -88,6 +88,18 @@ describe("voice assignment", () => {
     expect(voiceOf(revised, "bo")?.voiceId).not.toBe("voice_lib_heroine");
   });
 
+  it("gives a character a genuinely new voice when only the voice description changes", async () => {
+    // As in a real session: "Amber sounds a bit like an adult". The recast kept the voice type
+    // (so the library had the same voice for it) and rewrote only the description.
+    const pipSoundsDifferent = { ...pip, voiceDescription: "A bright, brisk, bouncy cartoon voice with a casual British accent." };
+    const { review, revise } = await toReview({ library: true, recast: { characters: [pipSoundsDifferent, bo] } });
+    expect(voiceOf(review, "pip")).toMatchObject({ voiceId: "voice_lib_heroine", source: "library" });
+
+    const revised = await revise("Pip sounds too grown-up");
+    expect(voiceOf(revised, "pip")?.voiceId).not.toBe("voice_lib_heroine");
+    expect(voiceOf(revised, "pip")).toMatchObject({ source: "designed" });
+  });
+
   it("drops removed characters and voices added ones", async () => {
     const zed: CharacterProfile = { ...bo, id: "zed", name: "Zed", hello: "Zzz." };
     const { revise } = await toReview({ recast: { characters: [pip, zed] } });
