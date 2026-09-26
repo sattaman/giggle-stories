@@ -103,3 +103,21 @@ describe("FsImageStore scenes", () => {
     expect(store.fileFor("story_1", "page-1-scene.svg")).toMatchObject({ type: "image/svg+xml" });
   });
 });
+
+describe("OpenRouterIllustrator references", () => {
+  it("sends earlier pictures as input_references data URLs", async () => {
+    const fake = await fakeOpenRouter(() => ({ status: 200, body: { created: 1, data: [{ b64_json: PNG.toString("base64"), media_type: "image/png" }] } }));
+    close = fake.close;
+    const illustrator = new OpenRouterIllustrator("k", log, { baseURL: fake.baseURL });
+    await illustrator.draw({ prompt: "page 2", references: [{ image: PNG, type: "image/png" }] });
+    const body = z.object({ input_references: z.array(z.object({ type: z.literal("image_url"), image_url: z.object({ url: z.string() }) })) }).parse(fake.requests[0]);
+    expect(body.input_references[0]?.image_url.url).toBe(`data:image/png;base64,${PNG.toString("base64")}`);
+  });
+
+  it("sends no references field when there are none", async () => {
+    const fake = await fakeOpenRouter(() => ({ status: 200, body: { created: 1, data: [{ b64_json: PNG.toString("base64"), media_type: "image/png" }] } }));
+    close = fake.close;
+    await new OpenRouterIllustrator("k", log, { baseURL: fake.baseURL }).draw({ prompt: "page 1" });
+    expect(JSON.stringify(fake.requests[0])).not.toContain("input_references");
+  });
+});

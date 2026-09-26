@@ -3,7 +3,7 @@
 // (0.4.x) doesn't support image output. The response is validated with zod, and each
 // picture's reported cost is logged.
 
-import type { ImageType, Illustrator, Logger } from "@storytime/app";
+import type { ImageType, Illustrator, Logger, ReferencePicture } from "@storytime/app";
 import { z } from "zod";
 
 /** Cheap, fast and good at following descriptions; overridable with STORY_IMAGE_MODEL. */
@@ -35,7 +35,11 @@ export class OpenRouterIllustrator implements Illustrator {
     this.baseURL = options.baseURL ?? "https://openrouter.ai/api/v1";
   }
 
-  async draw(request: { readonly prompt: string; readonly signal?: AbortSignal | undefined }): Promise<{
+  async draw(request: {
+    readonly prompt: string;
+    readonly references?: readonly ReferencePicture[] | undefined;
+    readonly signal?: AbortSignal | undefined;
+  }): Promise<{
     readonly image: Uint8Array;
     readonly type: ImageType;
   }> {
@@ -45,7 +49,22 @@ export class OpenRouterIllustrator implements Illustrator {
       headers: { authorization: `Bearer ${this.apiKey}`, "content-type": "application/json", "x-title": "Storytime" },
       // A 4:3 page picture at 1K is plenty for a tablet screen. (The image store re-encodes to a
       // small JPEG: gemini-3.1-flash-image ignores output_format and returns PNG.)
-      body: JSON.stringify({ model: this.model, prompt: request.prompt, n: 1, aspect_ratio: "4:3", resolution: "1K" }),
+      body: JSON.stringify({
+        model: this.model,
+        prompt: request.prompt,
+        n: 1,
+        aspect_ratio: "4:3",
+        resolution: "1K",
+        // Earlier pictures to copy characters from, so a story looks like one book.
+        ...(request.references === undefined || request.references.length === 0
+          ? {}
+          : {
+              input_references: request.references.map((ref) => ({
+                type: "image_url",
+                image_url: { url: `data:${ref.type};base64,${Buffer.from(ref.image).toString("base64")}` },
+              })),
+            }),
+      }),
       ...(request.signal === undefined ? {} : { signal: request.signal }),
     });
     if (!response.ok) throw new Error(`OpenRouter images ${String(response.status)}: ${(await response.text()).slice(0, 300)}`);
