@@ -46,6 +46,21 @@ export interface Clip {
   readonly signal?: AbortSignal | undefined;
 }
 
+/**
+ * Like `durableModel`, for calls the story can do without (e.g. rewriting a rejected voice
+ * description, where a stock voice is the fallback). The task records a failure as an outcome;
+ * the error is re-thrown here, in node code, where the caller's catch works.
+ */
+export function tolerantDurableModel(model: StructuredModel): StructuredModel {
+  return {
+    generate: async <S extends z.ZodType>(request: Parameters<StructuredModel["generate"]>[0] & { readonly schema: S }) => {
+      const outcome = await generateOrFail(model, request);
+      if (!outcome.ok) throw new Error(outcome.error);
+      return request.schema.parse(outcome.value);
+    },
+  };
+}
+
 /** A tolerated failure, described for logs (tasks return JSON, not Error objects). */
 export interface Failed {
   readonly ok: false;
@@ -55,6 +70,14 @@ export interface Failed {
 function failed(error: unknown): Failed {
   return { ok: false, error: error instanceof Error ? `${error.name}: ${error.message}` : String(error) };
 }
+
+const generateOrFail = task("generateOrFail", async (model: StructuredModel, request: GenerateRequest) => {
+  try {
+    return { ok: true as const, value: await model.generate(request) };
+  } catch (error: unknown) {
+    return failed(error);
+  }
+});
 
 /**
  * Synthesises a line and saves it. Call it in a fixed order and pass `limit` to bound

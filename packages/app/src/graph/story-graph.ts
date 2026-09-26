@@ -41,7 +41,7 @@ import { z } from "zod";
 import { createLimiter } from "../concurrency.ts";
 import type { StoryDeps } from "../ports.ts";
 import { StoryWriter } from "../writer/story-writer.ts";
-import { designVoice, durableModel, speak } from "./durable.ts";
+import { designVoice, durableModel, speak, tolerantDurableModel } from "./durable.ts";
 import { report } from "./progress.ts";
 
 const QuestionAndAnswer = z.object({ question: z.string(), answer: z.string() });
@@ -112,6 +112,14 @@ function similar(a: string, b: string): boolean {
 /** The story writer for a node: every model call is a durable task, cancelled with the node. */
 function writerFor(deps: StoryDeps, state: { readonly ageBand: AgeBand }, signal: AbortSignal | undefined): StoryWriter {
   return new StoryWriter(durableModel(deps.model), state.ageBand, signal);
+}
+
+/**
+ * The writer for voice preparation. Its only model call rewrites a rejected voice description,
+ * and a stock voice covers that failing, so its failures are tolerated rather than failing the run.
+ */
+function voiceWriterFor(deps: StoryDeps, state: { readonly ageBand: AgeBand }, signal: AbortSignal | undefined): StoryWriter {
+  return new StoryWriter(tolerantDurableModel(deps.model), state.ageBand, signal);
 }
 
 /** Built-in voice for the narrator when designed voices can't be used. */
@@ -185,7 +193,7 @@ const castCharacters: Node = async (state, config) => {
 
 const designVoices: Node = async (state, config) => {
   const deps = depsOf(config);
-  const writer = writerFor(deps, state, config.signal);
+  const writer = voiceWriterFor(deps, state, config.signal);
   report(config, { kind: "stage", stage: "casting", message: "Giving everyone a voice…" });
   const picks = pickLibraryVoices(deps, state.cast, new Set());
   const cast = await Promise.all(
@@ -350,13 +358,14 @@ const recast: Node = async (state, config) => {
   };
   const keptVoices = new Set(updated.filter(keeps).flatMap((c) => before.get(c.id)?.voice?.voiceId ?? []));
   const picks = pickLibraryVoices(deps, updated.filter((c) => !keeps(c)), keptVoices);
+  const voiceWriter = voiceWriterFor(deps, state, config.signal);
   const cast = await Promise.all(
     updated.map(async (character, index): Promise<Character> => {
       const oldVoice = before.get(character.id)?.voice;
       if (keeps(character) && oldVoice !== undefined) return { ...character, voice: oldVoice };
       deps.log.info({ storyId: state.storyId, character: character.id }, "character changed; new voice");
       return prepareVoice(deps, {
-        writer,
+        writer: voiceWriter,
         signal: config.signal,
         storyId: state.storyId,
         character,

@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { compileStoryGraph } from "../src/graph/story-graph.ts";
 import type { SpeechSynthesizer, StructuredModel } from "../src/ports.ts";
 import { StoryWriter } from "../src/writer/story-writer.ts";
-import { FakeModel, brief, cast, decisions, deps, outline, script } from "../testing/fakes.ts";
+import { FakeModel, FakeVoices, brief, cast, decisions, deps, outline, script } from "../testing/fakes.ts";
 
 describe("story writer corrections", () => {
   it("asks again when the cast leaves out a character from the brief", async () => {
@@ -116,5 +116,27 @@ describe("node timeouts", () => {
     expect(errors.some((e) => e instanceof NodeTimeoutError)).toBe(true);
     expect(aborted).toBe(true);
     expect((await graph.getState(config)).next).toEqual(["understand"]); // retryable later
+  });
+});
+
+describe("voice fallbacks survive model failures", () => {
+  it("falls back to a stock voice when design is rejected and the rewrite call fails", async () => {
+    // rewrite_voice has no scripted answer, so the model call throws.
+    const model = new FakeModel({
+      extract_brief: [brief],
+      decide_clarification: [decisions.ready],
+      cast_characters: [cast],
+      outline: [outline("First plan")],
+      write_page: [script],
+      rewrite_voice: [],
+    });
+    const graph = compileStoryGraph(new MemorySaver());
+    const config = {
+      configurable: { thread_id: "v" },
+      context: { deps: deps({ model, voices: new FakeVoices(true), stockVoices: { female: "voice_stock_f" } }) },
+    };
+    const review = await graph.invoke({ storyId: "v", idea: "Pip" }, config);
+    if (!isInterrupted(review)) throw new Error("expected outline review");
+    expect(review.cast[0]?.voice).toMatchObject({ voiceId: "voice_stock_f", source: "designed" });
   });
 });
