@@ -8,8 +8,16 @@ import { Client } from "langsmith";
 import { getCurrentRunTree, traceable } from "langsmith/traceable";
 import { TRANSCRIBE_MODEL, TTS_MODEL } from "./gemini/gemini.ts";
 
-/** One client for the traceable wrappers below, so their pending batches can be flushed. */
-const client = new Client();
+/**
+ * One client for the traceable wrappers below, so their pending batches can be flushed.
+ * Created on first use, not at import: the Client reads LANGSMITH_* when constructed, and
+ * main.ts loads .env after its imports have run.
+ */
+let shared: Client | undefined;
+function client(): Client {
+  shared ??= new Client();
+  return shared;
+}
 
 /**
  * Sends traces still queued in the background. Call before the process exits (scripts,
@@ -17,7 +25,7 @@ const client = new Client();
  */
 export async function flushTraces(): Promise<void> {
   await awaitAllCallbacks();
-  await client.awaitPendingTraceBatches();
+  await shared?.awaitPendingTraceBatches();
 }
 
 const gemini = (model: string) => ({ ls_provider: "google", ls_model_name: model });
@@ -35,7 +43,7 @@ export function tracedSpeech(inner: SpeechSynthesizer): SpeechSynthesizer {
       {
         name: "gemini_tts",
         run_type: "llm",
-        client,
+        client: client(),
         tags: ["gemini", "tts"],
         metadata: gemini(TTS_MODEL), // replaced by the model actually used, above
         processInputs: (request) => ({ text: request.text, voice_id: request.voiceId, style: request.style }),
@@ -50,7 +58,7 @@ export function tracedVoices(inner: VoiceDesigner): VoiceDesigner {
     design: traceable((request: Parameters<VoiceDesigner["design"]>[0]) => inner.design(request), {
       name: "gemini_voice_design",
       run_type: "tool",
-      client,
+      client: client(),
       tags: ["gemini", "voice-design"],
       metadata: gemini(TTS_MODEL),
       processInputs: (request) => ({ name: request.name, gender: request.gender, description: request.description }),
@@ -64,7 +72,7 @@ export function tracedTranscriber(inner: Transcriber): Transcriber {
   const transcribe = traceable((audio: Parameters<Transcriber["transcribe"]>[0]) => inner.transcribe(audio), {
     name: "gemini_transcribe",
     run_type: "llm",
-    client,
+    client: client(),
     tags: ["gemini", "stt"],
     metadata: gemini(TRANSCRIBE_MODEL),
     processInputs: (audio) => ({ mime_type: audio.mimeType, bytes: audio.bytes.byteLength }),
@@ -75,6 +83,6 @@ export function tracedTranscriber(inner: Transcriber): Transcriber {
     transcribe: (audio) =>
       audio.storyId === undefined
         ? transcribe(audio)
-        : traceable(() => transcribe(audio), { name: "transcription", client, metadata: { thread_id: audio.storyId } })(),
+        : traceable(() => transcribe(audio), { name: "transcription", client: client(), metadata: { thread_id: audio.storyId } })(),
   };
 }
