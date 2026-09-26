@@ -32,6 +32,8 @@ const Config = z.object({
   DATA_DIR: z.string().default(join(REPO_ROOT, "data")),
   STORY_MODEL_FAST: z.string().optional(),
   STORY_MODEL_CREATIVE: z.string().optional(),
+  /** Any OpenRouter image model, e.g. google/gemini-3-pro-image; default in the adapter. */
+  STORY_IMAGE_MODEL: z.string().optional(),
   LOG_PRETTY: z.enum(["true", "false"]).default("true"),
 });
 export type Config = z.infer<typeof Config> & { readonly publicUrl: string };

@@ -56,6 +56,8 @@ export const StoryView = z.object({
   characters: z.array(Character),
   title: z.string().nullable(),
   performance: Performance.nullable(),
+  /** The page's picture, once drawn (it arrives while the page is being performed). */
+  illustrationUrl: z.string().nullable(),
   error: z.string().nullable(),
   /** The story stopped part-way and can carry on from its last checkpoint (POST …/retry). */
   canRetry: z.boolean(),

@@ -5,6 +5,9 @@ import { compileStoryGraph } from "@storytime/app";
 import {
   DEFAULT_MODELS,
   FsAudioStore,
+  FsImageStore,
+  OpenRouterIllustrator,
+  tracedIllustrator,
   GeminiSpeech,
   GeminiTranscriber,
   GeminiVoiceDesigner,
@@ -50,6 +53,11 @@ const model = new OpenRouterStructuredModel(config.OPENROUTER_API_KEY, log, {
   },
 });
 
+const illustrator = new OpenRouterIllustrator(config.OPENROUTER_API_KEY, log, {
+  ...(config.STORY_IMAGE_MODEL === undefined ? {} : { model: config.STORY_IMAGE_MODEL }),
+});
+const images = new FsImageStore(join(config.DATA_DIR, "images"), `${config.publicUrl}/v1/images`);
+
 const narratorVoiceId = await ensureNarratorVoice(voices, config.DATA_DIR, log);
 const stockVoices = await ensureStockVoices(voices, config.DATA_DIR, log);
 const narration = new Narration(speech, audio, narratorVoiceId, log);
@@ -60,7 +68,18 @@ const db = new Database(join(config.DATA_DIR, "checkpoints.sqlite"));
 const graph = compileStoryGraph(new SqliteSaver(db));
 const stories = new GraphStoryService(
   graph,
-  { model, voices, speech, audio, log, narratorVoiceId, stockVoices, voiceLibrary },
+  {
+    model,
+    voices,
+    speech,
+    audio,
+    illustrator: tracedIllustrator(illustrator, illustrator.model),
+    images,
+    log,
+    narratorVoiceId,
+    stockVoices,
+    voiceLibrary,
+  },
   log,
   new StoryIndex(config.DATA_DIR, join(config.DATA_DIR, "audio")),
   new SqliteRunStore(db),
@@ -71,6 +90,7 @@ const app = await buildHttp({
   transcriber,
   narration: () => narration.view(),
   audioPath: (s, f) => audio.pathFor(s, f),
+  imageFile: (s, f) => images.fileFor(s, f),
   logger: log,
 });
 await app.listen({ port: config.PORT, host: config.HOST });

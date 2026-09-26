@@ -292,6 +292,7 @@ function emptyView(id: string): StoryView {
     characters: [],
     title: null,
     performance: null,
+    illustrationUrl: null,
     error: null,
     canRetry: false,
   };

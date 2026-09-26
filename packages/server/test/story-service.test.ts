@@ -117,6 +117,7 @@ describe("GraphStoryService", () => {
     const done = await settled(stories, id);
     expect(done.status).toBe("done");
     expect(done.performance?.segments.every((s) => s.audioUrl !== null)).toBe(true);
+    expect(done.illustrationUrl).toBe(`/images/${id}/page-1-picture.png`);
     expect((await stories.list()).map((s) => [s.id, s.status])).toEqual([[id, "done"]]);
   });
 

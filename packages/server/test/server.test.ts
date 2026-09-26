@@ -1,3 +1,6 @@
+import { mkdtemp, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { StoryView } from "@storytime/domain";
 import { describe, expect, it } from "vitest";
 import { buildHttp } from "../src/http.ts";
@@ -12,7 +15,7 @@ const script = {
   ],
 };
 
-const empty: PersistedStory = { idea: "a rocket", cast: [], performance: [] };
+const empty: PersistedStory = { idea: "a rocket", cast: [], performance: [], illustrationUrl: null };
 
 describe("buildView", () => {
   it("is 'working' with a friendly message while busy", () => {
@@ -83,6 +86,7 @@ describe("http", () => {
     characters: [],
     title: null,
     performance: null,
+    illustrationUrl: null,
     error: null,
     canRetry: false,
   };
@@ -99,6 +103,7 @@ describe("http", () => {
       transcriber: { transcribe: () => Promise.resolve("hello") },
       narration: () => ({ clips: { welcome: "http://a/w.wav", idea: null, thinking: null, voices_intro: null, voices_outro: null, changing: null, ready: null, the_end: null } }),
       audioPath: () => undefined,
+      imageFile: () => undefined,
       logger: false,
     });
 
@@ -132,6 +137,7 @@ describe("http", () => {
       },
       narration: () => ({ clips: { welcome: null, idea: null, thinking: null, voices_intro: null, voices_outro: null, changing: null, ready: null, the_end: null } }),
       audioPath: () => undefined,
+      imageFile: () => undefined,
       logger: false,
     });
     const boundary = "----storytime";
@@ -145,6 +151,23 @@ describe("http", () => {
     expect(seen).toEqual(["story_abc", undefined]);
   });
 
+  it("serves a story's picture with its type, and refuses unsafe names", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "storytime-img-"));
+    await writeFile(join(dir, "page-1-picture.png"), new Uint8Array([137, 80, 78, 71]));
+    const server = await buildHttp({
+      stories,
+      transcriber: { transcribe: () => Promise.resolve("") },
+      narration: () => ({ clips: { welcome: null, idea: null, thinking: null, voices_intro: null, voices_outro: null, changing: null, ready: null, the_end: null } }),
+      audioPath: () => undefined,
+      imageFile: (_story, file) => (file === "page-1-picture.png" ? { path: join(dir, file), type: "image/png" } : undefined),
+      logger: false,
+    });
+    const ok = await server.inject({ method: "GET", url: "/v1/images/story_abc/page-1-picture.png" });
+    expect(ok.statusCode).toBe(200);
+    expect(ok.headers["content-type"]).toBe("image/png");
+    expect((await server.inject({ method: "GET", url: "/v1/images/story_abc/nope.svg" })).statusCode).toBe(404);
+  });
+
   it("reports upstream validation failures as 502, not 400", async () => {
     const { z } = await import("zod");
     const server = await buildHttp({
@@ -152,6 +175,7 @@ describe("http", () => {
       transcriber: { transcribe: () => Promise.resolve("") },
       narration: () => ({ clips: { welcome: null, idea: null, thinking: null, voices_intro: null, voices_outro: null, changing: null, ready: null, the_end: null } }),
       audioPath: () => undefined,
+      imageFile: () => undefined,
       logger: false,
     });
     const res = await server.inject({ method: "POST", url: "/v1/stories", payload: { idea: "a rocket" } });
