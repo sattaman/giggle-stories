@@ -1,0 +1,54 @@
+// The picture for a page, described for an image model. Built from the page's own script (no
+// extra model call), so the picture shows what the child is hearing.
+
+import type { AgeBand, CharacterProfile, PageScript, StoryBrief } from "@storytime/domain";
+
+/** One consistent look for every story: warm picture-book art, never text in the image. */
+const STYLE = [
+  "A warm, funny children's picture-book illustration in soft watercolour and ink.",
+  "Bright, friendly colours, expressive cartoon characters with big readable faces, a clear focal point.",
+  "Gentle and safe for young children; nothing frightening, gory or realistic-photo.",
+  "Landscape composition with room around the characters.",
+  "Absolutely no text, letters, words, numbers or speech bubbles in the image.",
+].join(" ");
+
+const MOOD: Record<AgeBand, string> = {
+  "0-4": "Very simple shapes, a few big characters, soft rounded forms, cosy and bright.",
+  "5-8": "Lively and playful, a little visual joke in the background.",
+  "9-12": "More detailed scene with a sense of adventure, still cartoon-styled.",
+};
+
+export function illustrationPrompt(input: {
+  readonly brief: StoryBrief;
+  readonly cast: readonly CharacterProfile[];
+  readonly script: PageScript;
+  readonly ageBand: AgeBand;
+}): string {
+  const { brief, cast, script, ageBand } = input;
+  // The child's own words about each character decide how they look (species, colour, clothes).
+  const detailsOf = new Map(brief.characters.map((c) => [c.name.toLowerCase(), c.details]));
+  const nameOf = new Map(cast.map((c) => [c.id, c.name]));
+  const characters = cast.map((c) => {
+    const details = detailsOf.get(c.name.toLowerCase());
+    return `- ${c.name} ${c.emoji}: ${[details, c.personality].filter((part) => part !== undefined && part !== "").join("; ")}`;
+  });
+  // The page as it will be heard, so the picture shows its moment rather than a summary.
+  const page = script.segments.map((s) => `${s.speaker === "narrator" ? "Narrator" : (nameOf.get(s.speaker) ?? s.speaker)}: ${stripTags(s.text)}`);
+  return [
+    STYLE,
+    MOOD[ageBand],
+    `Story: ${brief.premise}`,
+    brief.setting === "" ? "" : `Setting: ${brief.setting}.`,
+    "Characters (draw each exactly as described, and the same way every time):",
+    ...characters,
+    `Draw the single funniest or most exciting moment of this page, with the characters in it:`,
+    ...page,
+  ]
+    .filter((line) => line !== "")
+    .join("\n");
+}
+
+/** Vocal tags like <giggle> are for the voice actor, not the illustrator. */
+function stripTags(text: string): string {
+  return text.replace(/<[a-z -]+>/gi, "").replace(/\s{2,}/g, " ").trim();
+}

@@ -7,6 +7,7 @@ graph TD;
 	designVoices(designVoices)
 	planOutline(planOutline)
 	draftPage(draftPage)
+	illustrate(illustrate)
 	reviewOutline(reviewOutline)
 	reviseOutline(reviseOutline)
 	recast(recast)
@@ -18,6 +19,7 @@ graph TD;
 	castCharacters --> planOutline;
 	designVoices --> reviewOutline;
 	draftPage --> reviewOutline;
+	illustrate --> __end__;
 	performPage --> __end__;
 	planOutline --> draftPage;
 	recast --> redraftPage;
@@ -27,6 +29,7 @@ graph TD;
 	understand -.-> askQuestion;
 	askQuestion -.-> understand;
 	reviewOutline -.-> performPage;
+	reviewOutline -.-> illustrate;
 	reviewOutline -.-> reviseOutline;
 	classDef default fill:#f2f0ff,line-height:1.2;
 	classDef first fill-opacity:0;

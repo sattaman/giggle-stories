@@ -1,0 +1,61 @@
+import { Command, MemorySaver, isInterrupted } from "@langchain/langgraph";
+import { describe, expect, it } from "vitest";
+import { compileStoryGraph } from "../src/graph/story-graph.ts";
+import { illustrationPrompt } from "../src/writer/illustration.ts";
+import { FakeIllustrator, FakeModel, brief, cast, decisions, deps, outline, script } from "../testing/fakes.ts";
+
+function setup(illustrator: FakeIllustrator) {
+  const model = new FakeModel({
+    extract_brief: [brief],
+    decide_clarification: [decisions.ready],
+    cast_characters: [cast],
+    outline: [outline("First plan")],
+    revise_outline: [outline("Revised plan")],
+    recast_characters: [cast],
+    write_page: [script],
+  });
+  const graph = compileStoryGraph(new MemorySaver());
+  const config = { configurable: { thread_id: "pic" }, context: { deps: deps({ model, illustrator }) } };
+  return { graph, config };
+}
+
+describe("the page's picture", () => {
+  it("is drawn once, after approval, from the page the child hears", async () => {
+    const illustrator = new FakeIllustrator();
+    const { graph, config } = setup(illustrator);
+    const review = await graph.invoke({ storyId: "pic", idea: "Pip" }, config);
+    if (!isInterrupted(review)) throw new Error("expected outline review");
+    await graph.invoke(new Command({ resume: { approved: false, feedback: "Make it spookier" } }), config);
+    expect(illustrator.prompts).toHaveLength(0); // nothing drawn for plans that change
+
+    const done = await graph.invoke(new Command({ resume: { approved: true } }), config);
+    expect(done.illustrationUrl).toBe("/images/pic/page-1-picture.png");
+    expect(done.performance).toHaveLength(script.segments.length);
+    expect(illustrator.prompts).toHaveLength(1);
+    expect(illustrator.prompts[0]).toContain("Pip: To the MOON!");
+  });
+
+  it("leaves the story without a picture when drawing fails", async () => {
+    const { graph, config } = setup(new FakeIllustrator(true));
+    await graph.invoke({ storyId: "pic", idea: "Pip" }, config);
+    const done = await graph.invoke(new Command({ resume: { approved: true } }), config);
+    expect(done.illustrationUrl).toBeNull();
+    expect(done.performance.every((s) => s.audioUrl !== null)).toBe(true);
+  });
+});
+
+describe("illustrationPrompt", () => {
+  const prompt = illustrationPrompt({ brief, cast: cast.characters, script, ageBand: "0-4" });
+
+  it("describes characters in the child's words and the page as heard, without vocal tags", () => {
+    expect(prompt).toContain("Pip 🚀: inventor, loves jam");
+    expect(prompt).toContain("Narrator: It was a bad plan.");
+    expect(prompt).toContain("Pip: A brilliant bad plan.");
+    expect(prompt).not.toContain("<giggle>");
+  });
+
+  it("forbids text in the image and sets the mood for the age band", () => {
+    expect(prompt).toContain("no text, letters, words");
+    expect(prompt).toContain("Very simple shapes");
+  });
+});
