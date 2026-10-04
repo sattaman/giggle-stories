@@ -4,6 +4,11 @@
 
 Built as a real product for one very demanding user (success = she laughs and asks for another). It's also a portfolio piece showing how to build an **agentic, multi-provider AI workflow that's durable, observable and tested**, rather than a prompt in a loop.
 
+
+<img height="400" alt="Create your story" src="https://github.com/user-attachments/assets/7991ffa9-2d5f-4f8c-a701-34f246f95b72" />
+
+https://github.com/user-attachments/assets/1b8a5a7b-726e-45b1-a2ad-7e75de0dcfbd
+
 ```text
  "A hamster chef who's scared of spoons!"
         │  speech → text (Gemini 3.5 Transcribe)
