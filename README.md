@@ -1,8 +1,33 @@
-# Storytime (giggle-stories)
+<div align="center">
+
+# Storytime
+
+**Say a silly idea out loud. Hear it performed as a funny story, with a voice for every character.**
+
+[![CI](https://github.com/sattaman/giggle-stories/actions/workflows/ci.yml/badge.svg)](https://github.com/sattaman/giggle-stories/actions/workflows/ci.yml)
+![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)
+![LangGraph.js](https://img.shields.io/badge/LangGraph.js-1.4-1c3c3c?logo=langchain&logoColor=white)
+![Gemini](https://img.shields.io/badge/Gemini-TTS%20%C2%B7%20Voice%20Design-8e75b2?logo=googlegemini&logoColor=white)
+![Expo](https://img.shields.io/badge/Expo-web%20%C2%B7%20iOS%20%C2%B7%20Android-000020?logo=expo&logoColor=white)
+
+</div>
+
+https://github.com/user-attachments/assets/dd04212b-3196-413c-9fc8-ae785f55580a
+
+<table>
+<tr>
+<td width="42%" align="center"><img src="docs/images/idea-screen.png" alt="The idea screen: a big microphone button, age-range picker and a 'Type instead' option" width="320"></td>
+<td>
 
 **A funny, voice-performed story generator for children.** A child *says* a story idea out loud. The app asks one or two quick questions and casts the characters, each with their own designed voice. It proposes a plan the child can change by talking, then performs the page aloud: a narrator plus a distinct voice for every character, and a picture-book illustration of the moment they're hearing.
 
 Built as a real product for one very demanding user (success = she laughs and asks for another). It's also a portfolio piece showing how to build an **agentic, multi-provider AI workflow that's durable, observable and tested**, rather than a prompt in a loop.
+
+</td>
+</tr>
+</table>
+
+## How a story happens
 
 ```text
  "A hamster chef who's scared of spoons!"
