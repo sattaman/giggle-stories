@@ -1,11 +1,10 @@
 # Storytime (giggle-stories)
 
+<img height="400" alt="Create your story" src="https://github.com/user-attachments/assets/7991ffa9-2d5f-4f8c-a701-34f246f95b72" />
+
 **A funny, voice-performed story generator for children.** A child *says* a story idea out loud. The app asks one or two quick questions and casts the characters, each with their own designed voice. It proposes a plan the child can change by talking, then performs the page aloud: a narrator plus a distinct voice for every character, and a picture-book illustration of the moment they're hearing.
 
 Built as a real product for one very demanding user (success = she laughs and asks for another). It's also a portfolio piece showing how to build an **agentic, multi-provider AI workflow that's durable, observable and tested**, rather than a prompt in a loop.
-
-
-<img height="400" alt="Create your story" src="https://github.com/user-attachments/assets/7991ffa9-2d5f-4f8c-a701-34f246f95b72" />
 
 https://github.com/user-attachments/assets/1b8a5a7b-726e-45b1-a2ad-7e75de0dcfbd
 
