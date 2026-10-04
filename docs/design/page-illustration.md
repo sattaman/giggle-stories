@@ -64,7 +64,7 @@ Biscuit: Stay close, brave raisin. I may need your raisinous protection.
 ## Model and API
 
 - **API:** OpenRouter's Images API (`POST /api/v1/images`). Request: `{ model, prompt, n: 1, aspect_ratio: "4:3", resolution: "1K" }`. Response: base64 image plus `media_type`, and `usage.cost` in USD, which we log for every picture.
-- **Model:** `google/gemini-3.1-flash-image` by default. Any OpenRouter image model can be chosen with one environment variable, `STORY_IMAGE_MODEL`. Other candidates:
+- **Model:** `google/gemini-3.1-flash-lite-image` by default, chosen by the picture evals in `packages/evals` (the most consistent across three-page stories when given page 1 as a reference, at half the price). Originally `google/gemini-3.1-flash-image`. Any OpenRouter image model can be chosen with one environment variable, `STORY_IMAGE_MODEL`. Other candidates:
   - `google/gemini-3-pro-image`
   - `openai/gpt-5.4-image-2`
   - `openai/gpt-5-image-mini`

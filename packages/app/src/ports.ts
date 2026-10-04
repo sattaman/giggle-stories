@@ -73,9 +73,19 @@ export interface AudioStore {
 
 export type ImageType = "image/png" | "image/jpeg" | "image/webp";
 
-/** Draws a picture from a text description. */
+/** A picture handed to the illustrator to copy characters from (e.g. the story's first page). */
+export interface ReferencePicture {
+  readonly image: Uint8Array;
+  readonly type: ImageType;
+}
+
+/** Draws a picture from a text description, optionally matching reference pictures. */
 export interface Illustrator {
-  draw(request: { readonly prompt: string; readonly signal?: AbortSignal | undefined }): Promise<{
+  draw(request: {
+    readonly prompt: string;
+    readonly references?: readonly ReferencePicture[] | undefined;
+    readonly signal?: AbortSignal | undefined;
+  }): Promise<{
     readonly image: Uint8Array;
     readonly type: ImageType;
   }>;

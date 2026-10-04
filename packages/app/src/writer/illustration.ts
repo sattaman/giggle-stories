@@ -23,11 +23,16 @@ export function illustrationPrompt(input: {
   readonly cast: readonly CharacterProfile[];
   readonly script: PageScript;
   readonly ageBand: AgeBand;
+  /** Earlier pages' pictures are attached: keep the characters and style identical to them. */
+  readonly withReferences?: boolean;
 }): string {
   const { brief, cast, script, ageBand } = input;
   return [
     STYLE,
     MOOD[ageBand],
+    input.withReferences === true
+      ? "This is a later page of the same picture book. The attached pictures are earlier pages: draw every character who appears in them with exactly the same face, body, colours and clothes, in the same art style."
+      : "",
     `Story: ${brief.premise}`,
     brief.setting === "" ? "" : `Setting: ${brief.setting}.`,
     "Characters (draw each exactly as described, and the same way every time):",
