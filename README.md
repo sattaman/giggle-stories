@@ -6,7 +6,7 @@
 
 Built as a real product for one very demanding user (success = she laughs and asks for another). It's also a portfolio piece showing how to build an **agentic, multi-provider AI workflow that's durable, observable and tested**, rather than a prompt in a loop.
 
-https://github.com/user-attachments/assets/1b8a5a7b-726e-45b1-a2ad-7e75de0dcfbd
+https://github.com/user-attachments/assets/dd04212b-3196-413c-9fc8-ae785f55580a
 
 ```text
  "A hamster chef who's scared of spoons!"
